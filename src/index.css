@@ -1,0 +1,38 @@
+@import 'tailwindcss';
+@import './theme.css';
+
+@theme {
+  --color-paper: #faf6f0;
+  --color-ink: #2c2833;
+  --color-accent-a: #6e80d8;
+  --color-accent-b: #e07a93;
+  --color-match: #9a6fc0;
+  --color-pass: #9a95a3;
+
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Hanken Grotesk', sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
