@@ -3,6 +3,8 @@ import type { Name } from '../types'
 interface NameCardProps {
   name: Name
   lastName?: string
+  middleName?: string
+  onTapName?: () => void
   style?: React.CSSProperties
   className?: string
 }
@@ -13,17 +15,20 @@ const genderColors: Record<string, string> = {
   unisex: 'bg-match/15 text-match',
 }
 
-function formatInitials(firstName: string, lastName: string): string {
+function formatInitials(firstName: string, middleName: string, lastName: string): string {
   const fi = firstName.charAt(0).toUpperCase()
+  const mi = middleName ? middleName.charAt(0).toUpperCase() : ''
   const li = lastName.charAt(0).toUpperCase()
-  return `${fi}.${li}.`
+  return mi ? `${fi}.${mi}.${li}.` : `${fi}.${li}.`
 }
 
-export default function NameCard({ name, lastName, style, className = '' }: NameCardProps) {
+export default function NameCard({ name, lastName, middleName, onTapName, style, className = '' }: NameCardProps) {
+  const hasSecondary = lastName || middleName
+
   return (
     <div
       role="article"
-      aria-label={`Baby name: ${name.value}${lastName ? ` ${lastName}` : ''}, ${name.gender}${name.origin ? `, origin: ${name.origin}` : ''}`}
+      aria-label={`Baby name: ${name.value}${middleName ? ` ${middleName}` : ''}${lastName ? ` ${lastName}` : ''}, ${name.gender}${name.origin ? `, origin: ${name.origin}` : ''}`}
       className={`flex flex-col items-center justify-center rounded-2xl bg-white shadow-md ${className}`}
       style={{
         width: '100%',
@@ -32,18 +37,21 @@ export default function NameCard({ name, lastName, style, className = '' }: Name
       }}
     >
       <h2 className="text-center font-display font-semibold text-ink">
-        <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl">
+        <span
+          className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl ${onTapName ? 'cursor-pointer underline decoration-pass/20 decoration-2 underline-offset-4 hover:decoration-match/40' : ''}`}
+          onClick={onTapName}
+        >
           {name.value}
         </span>
-        {lastName && (
+        {hasSecondary && (
           <span className="text-3xl font-medium text-pass/50 sm:text-4xl md:text-5xl">
-            {' '}{lastName}
+            {middleName ? ` ${middleName}` : ''}{lastName ? ` ${lastName}` : ''}
           </span>
         )}
       </h2>
       {lastName && (
         <p className="mt-1 text-sm tracking-wide text-pass/60 md:text-base">
-          {formatInitials(name.value, lastName)}
+          {formatInitials(name.value, middleName ?? '', lastName)}
         </p>
       )}
       <div className="mt-4 flex items-center gap-2 md:mt-6">

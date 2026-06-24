@@ -3,6 +3,7 @@ import type { Match } from '../types'
 interface MatchListProps {
   matches: Match[]
   lastName?: string
+  middleName?: string
 }
 
 const genderColors: Record<string, string> = {
@@ -11,13 +12,14 @@ const genderColors: Record<string, string> = {
   unisex: 'bg-match/15 text-match',
 }
 
-function formatInitials(firstName: string, lastName: string): string {
+function formatInitials(firstName: string, middleName: string, lastName: string): string {
   const fi = firstName.charAt(0).toUpperCase()
+  const mi = middleName ? middleName.charAt(0).toUpperCase() : ''
   const li = lastName.charAt(0).toUpperCase()
-  return `${fi}.${li}.`
+  return mi ? `${fi}.${mi}.${li}.` : `${fi}.${li}.`
 }
 
-export default function MatchList({ matches, lastName }: MatchListProps) {
+export default function MatchList({ matches, lastName, middleName }: MatchListProps) {
   if (matches.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -39,11 +41,15 @@ export default function MatchList({ matches, lastName }: MatchListProps) {
           <div className="flex-1">
             <p className="font-display text-lg font-semibold text-ink">
               {match.value}
-              {lastName && <span className="text-base font-medium text-pass/50"> {lastName}</span>}
+              {(middleName || lastName) && (
+                <span className="text-base font-medium text-pass/50">
+                  {middleName ? ` ${middleName}` : ''}{lastName ? ` ${lastName}` : ''}
+                </span>
+              )}
             </p>
             {lastName && (
               <p className="text-xs tracking-wide text-pass/50">
-                {formatInitials(match.value, lastName)}
+                {formatInitials(match.value, middleName ?? '', lastName)}
               </p>
             )}
             <div className="flex items-center gap-2">

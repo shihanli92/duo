@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import NameCard from './NameCard'
+import { getVariants } from '../lib/nameVariants'
 import type { Name } from '../types'
 
 const SWIPE_THRESHOLD = 100
@@ -8,21 +9,37 @@ const EXIT_DISTANCE = 500
 interface SwipeDeckProps {
   names: Name[]
   lastName?: string
+  middleName?: string
   onVote: (name: Name, value: 'like' | 'pass') => void
   onUndo?: () => void
   canUndo?: boolean
+  onMiddleNameChange?: (value: string) => void
+  onSelectVariant?: (original: Name, variantValue: string) => Promise<Name>
 }
 
-export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: SwipeDeckProps) {
+export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo, canUndo, onMiddleNameChange, onSelectVariant }: SwipeDeckProps) {
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [exiting, setExiting] = useState<'left' | 'right' | null>(null)
+  const [showVariants, setShowVariants] = useState(false)
+  const [replacedName, setReplacedName] = useState<Name | null>(null)
+  const [localMiddleName, setLocalMiddleName] = useState(middleName ?? '')
+  const [deckIndex, setDeckIndex] = useState(0)
   const dragging = useRef(false)
   const startX = useRef(0)
+  const didDrag = useRef(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
-  const currentName = names[0]
-  const nextName = names[1]
+  // Clamp index if deck shrinks (e.g. after a vote removes a name)
+  const clampedIndex = Math.min(deckIndex, Math.max(names.length - 1, 0))
+  if (clampedIndex !== deckIndex) {
+    setDeckIndex(clampedIndex)
+  }
+
+  const baseName = names[clampedIndex]
+  const currentName = replacedName ?? baseName
+  // Always compute variants from the original base name, not the replacement
+  const variants = baseName ? getVariants(baseName.value) : []
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
@@ -33,15 +50,21 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
         onVote(currentName, direction === 'right' ? 'like' : 'pass')
         setExiting(null)
         setDragX(0)
+        setShowVariants(false)
+        setReplacedName(null)
+        // After vote, the voted name is removed from the array.
+        // If we were at the end, step back so we don't overshoot.
+        setDeckIndex((i) => Math.min(i, Math.max(names.length - 2, 0)))
       }, 250)
     },
-    [currentName, exiting, onVote],
+    [currentName, exiting, onVote, names.length],
   )
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (exiting) return
       dragging.current = true
+      didDrag.current = false
       startX.current = e.clientX
       setIsDragging(true)
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
@@ -52,7 +75,9 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!dragging.current) return
-      setDragX(e.clientX - startX.current)
+      const dx = e.clientX - startX.current
+      if (Math.abs(dx) > 5) didDrag.current = true
+      setDragX(dx)
     },
     [],
   )
@@ -69,6 +94,48 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
     }
   }, [dragX, handleSwipe])
 
+  const handleNameTap = useCallback(() => {
+    if (didDrag.current) return
+    if (variants.length > 0) {
+      setShowVariants((v) => !v)
+    }
+  }, [variants.length])
+
+  const handleVariantSelect = useCallback(
+    async (variantValue: string) => {
+      if (!baseName || !onSelectVariant) return
+      // Selecting the original name again clears the replacement
+      if (variantValue === baseName.value) {
+        setReplacedName(null)
+        return
+      }
+      const newName = await onSelectVariant(baseName, variantValue)
+      setReplacedName(newName)
+    },
+    [baseName, onSelectVariant],
+  )
+
+  const handleMiddleNameBlur = useCallback(() => {
+    const trimmed = localMiddleName.trim()
+    if (trimmed !== (middleName ?? '') && onMiddleNameChange) {
+      onMiddleNameChange(trimmed)
+    }
+  }, [localMiddleName, middleName, onMiddleNameChange])
+
+  const goBack = useCallback(() => {
+    if (clampedIndex <= 0) return
+    setDeckIndex(clampedIndex - 1)
+    setShowVariants(false)
+    setReplacedName(null)
+  }, [clampedIndex])
+
+  const goForward = useCallback(() => {
+    if (clampedIndex >= names.length - 1) return
+    setDeckIndex(clampedIndex + 1)
+    setShowVariants(false)
+    setReplacedName(null)
+  }, [clampedIndex, names.length])
+
   // Keyboard support
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -78,6 +145,12 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         handleSwipe('right')
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        goBack()
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        goForward()
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && canUndo && onUndo) {
         e.preventDefault()
         onUndo()
@@ -85,7 +158,7 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleSwipe, canUndo, onUndo])
+  }, [handleSwipe, goBack, goForward, canUndo, onUndo])
 
   if (!currentName) {
     return (
@@ -105,13 +178,6 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
     <div className="relative flex h-full flex-col items-center">
       {/* Card stack */}
       <div className="relative h-80 w-full max-w-xs sm:h-96 md:h-[28rem] md:max-w-md lg:h-[32rem] lg:max-w-lg">
-        {/* Next card peek */}
-        {nextName && !exiting && (
-          <div className="absolute inset-0 scale-95 opacity-60">
-            <NameCard name={nextName} lastName={lastName} />
-          </div>
-        )}
-
         {/* Current card */}
         <div
           ref={cardRef}
@@ -139,12 +205,96 @@ export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: 
             </div>
           )}
 
-          <NameCard name={currentName} lastName={lastName} />
+          <NameCard
+            name={currentName}
+            lastName={lastName}
+            middleName={middleName}
+            onTapName={variants.length > 0 ? handleNameTap : undefined}
+          />
         </div>
       </div>
 
+      {/* Variant pills */}
+      {showVariants && variants.length > 0 && baseName && (
+        <div className="mt-2 flex flex-wrap justify-center gap-2 px-4">
+          <span className="w-full text-center text-xs text-pass">Spelling variants:</span>
+          {/* Original name pill */}
+          <button
+            onClick={() => handleVariantSelect(baseName.value)}
+            className={`rounded-full border px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match ${
+              !replacedName
+                ? 'border-match bg-match text-white'
+                : 'border-match/30 bg-white text-match hover:bg-match/10'
+            }`}
+          >
+            {baseName.value}
+          </button>
+          {variants.map((v) => {
+            const isActive = replacedName?.value === v
+            return (
+              <button
+                key={v}
+                onClick={() => handleVariantSelect(v)}
+                className={`rounded-full border px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match ${
+                  isActive
+                    ? 'border-match bg-match text-white'
+                    : 'border-match/30 bg-white text-match hover:bg-match/10'
+                }`}
+              >
+                {v}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Middle name */}
+      {onMiddleNameChange && (
+        <div className="mt-3 flex justify-center">
+          <input
+            type="text"
+            value={localMiddleName}
+            onChange={(e) => setLocalMiddleName(e.target.value)}
+            onBlur={handleMiddleNameBlur}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            placeholder="middle name"
+            aria-label="Middle name"
+            className="w-40 border-b border-pass/30 bg-transparent text-center text-sm text-pass focus:border-match focus:text-ink focus-visible:outline-none"
+          />
+        </div>
+      )}
+
+      {/* Deck navigation */}
+      {names.length > 1 && (
+        <div className="mt-3 flex items-center justify-center gap-4">
+          <button
+            onClick={goBack}
+            disabled={clampedIndex <= 0}
+            aria-label="Previous name"
+            className="rounded-full p-1.5 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <span className="min-w-[4rem] text-center text-xs tabular-nums text-pass">
+            {clampedIndex + 1} / {names.length}
+          </span>
+          <button
+            onClick={goForward}
+            disabled={clampedIndex >= names.length - 1}
+            aria-label="Next name"
+            className="rounded-full p-1.5 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Action buttons */}
-      <div className="mt-8 flex items-center gap-8">
+      <div className="mt-4 flex items-center gap-8">
         <button
           onClick={() => handleSwipe('left')}
           disabled={!!exiting}

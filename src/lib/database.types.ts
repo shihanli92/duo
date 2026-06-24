@@ -8,18 +8,21 @@ export type Database = {
           id: string
           invite_code: string
           last_name: string
+          middle_name: string
           created_at: string
         }
         Insert: {
           id?: string
           invite_code?: string
           last_name?: string
+          middle_name?: string
           created_at?: string
         }
         Update: {
           id?: string
           invite_code?: string
           last_name?: string
+          middle_name?: string
           created_at?: string
         }
         Relationships: []
@@ -75,6 +78,36 @@ export type Database = {
           origin?: string
           created_by?: string | null
           created_at?: string
+        }
+        Relationships: []
+      }
+      match_rankings: {
+        Row: {
+          id: string
+          couple_id: string
+          user_id: string
+          name_id: string
+          rank: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          couple_id: string
+          user_id: string
+          name_id: string
+          rank: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          couple_id?: string
+          user_id?: string
+          name_id?: string
+          rank?: number
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

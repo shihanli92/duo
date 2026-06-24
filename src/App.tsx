@@ -10,6 +10,7 @@ const Onboarding = lazy(() => import('./routes/Onboarding'))
 const Swipe = lazy(() => import('./routes/Swipe'))
 const Matches = lazy(() => import('./routes/Matches'))
 const AddNames = lazy(() => import('./routes/AddNames'))
+const Ranking = lazy(() => import('./routes/Ranking'))
 const Settings = lazy(() => import('./routes/Settings'))
 
 function Loading() {
@@ -32,6 +33,7 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/swipe" element={<Swipe />} />
                 <Route path="/matches" element={<Matches />} />
+                <Route path="/ranking" element={<Ranking />} />
                 <Route path="/add-names" element={<AddNames />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>

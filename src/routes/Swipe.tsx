@@ -8,6 +8,8 @@ import {
   useCastVote,
   useDeleteVote,
   usePartnerProgress,
+  useUpdateCouple,
+  useAddName,
 } from '../lib/queries'
 import SwipeDeck from '../components/SwipeDeck'
 import GenderFilter from '../components/GenderFilter'
@@ -27,6 +29,8 @@ export default function Swipe() {
   const { data: progress } = usePartnerProgress(coupleId)
   const castVote = useCastVote()
   const deleteVote = useDeleteVote()
+  const updateCouple = useUpdateCouple()
+  const addName = useAddName()
   const qc = useQueryClient()
   const [prevMatchCount, setPrevMatchCount] = useState<number | null>(null)
   const [matchedName, setMatchedName] = useState<string | null>(null)
@@ -79,6 +83,28 @@ export default function Swipe() {
     })
   }, [lastVote, deleteVote])
 
+  const handleMiddleNameChange = useCallback(
+    (value: string) => {
+      if (!coupleId) return
+      updateCouple.mutate({ coupleId, middleName: value })
+    },
+    [coupleId, updateCouple],
+  )
+
+  const handleSelectVariant = useCallback(
+    async (original: Name, variantValue: string) => {
+      if (!coupleId) throw new Error('No couple')
+      const newName = await addName.mutateAsync({
+        coupleId,
+        value: variantValue,
+        gender: original.gender as 'girl' | 'boy' | 'unisex',
+        origin: original.origin ?? '',
+      })
+      return newName as Name
+    },
+    [coupleId, addName],
+  )
+
   if (isLoading) {
     return (
       <div className="flex min-h-svh items-center justify-center">
@@ -99,9 +125,12 @@ export default function Swipe() {
         <SwipeDeck
           names={names}
           lastName={couple?.last_name}
+          middleName={couple?.middle_name}
           onVote={handleVote}
           onUndo={handleUndo}
           canUndo={!!lastVote}
+          onMiddleNameChange={handleMiddleNameChange}
+          onSelectVariant={handleSelectVariant}
         />
       </div>
 

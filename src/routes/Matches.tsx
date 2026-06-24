@@ -81,7 +81,7 @@ export default function Matches() {
           <p className="text-ink/50">Loading matches...</p>
         </div>
       ) : (
-        <MatchList matches={matches} lastName={couple?.last_name} />
+        <MatchList matches={matches} lastName={couple?.last_name} middleName={couple?.middle_name} />
       )}
 
       <TabBar />

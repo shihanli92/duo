@@ -7,6 +7,7 @@ import type {
   Couple,
   Name,
   Match,
+  MatchRanking,
   PartnerProgress,
   Gender,
   VoteValue,
@@ -171,10 +172,13 @@ export function useUpdateCouple() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: { coupleId: string; lastName: string }) => {
+    mutationFn: async (data: { coupleId: string; lastName?: string; middleName?: string }) => {
       const { data: couple, error } = await supabase
         .from('couples')
-        .update({ last_name: data.lastName })
+        .update({
+          ...(data.lastName !== undefined && { last_name: data.lastName }),
+          ...(data.middleName !== undefined && { middle_name: data.middleName }),
+        })
         .eq('id', data.coupleId)
         .select()
         .single()
@@ -413,6 +417,61 @@ export function usePartnerProgress(coupleId: string | null | undefined) {
 }
 
 // ============================================================
+// Match Rankings
+// ============================================================
+
+export function useMatchRankings(coupleId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['match-rankings', coupleId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('match_rankings')
+        .select('*')
+        .eq('couple_id', coupleId!)
+        .order('rank', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as MatchRanking[]
+    },
+    enabled: !!coupleId,
+  })
+}
+
+export function useUpdateRankings() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: {
+      coupleId: string
+      userId: string
+      rankings: { nameId: string; rank: number }[]
+    }) => {
+      const { error: deleteError } = await supabase
+        .from('match_rankings')
+        .delete()
+        .eq('couple_id', data.coupleId)
+        .eq('user_id', data.userId)
+      if (deleteError) throw deleteError
+
+      if (data.rankings.length > 0) {
+        const rows = data.rankings.map((r) => ({
+          couple_id: data.coupleId,
+          user_id: data.userId,
+          name_id: r.nameId,
+          rank: r.rank,
+        }))
+        const { error: insertError } = await supabase
+          .from('match_rankings')
+          .insert(rows)
+        if (insertError) throw insertError
+      }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['match-rankings', vars.coupleId] })
+    },
+  })
+}
+
+// ============================================================
 // Reset (for Settings)
 // ============================================================
 
@@ -428,6 +487,7 @@ export function useResetVotes() {
       qc.invalidateQueries({ queryKey: ['unvoted-names'] })
       qc.invalidateQueries({ queryKey: ['matches'] })
       qc.invalidateQueries({ queryKey: ['partner-progress'] })
+      qc.invalidateQueries({ queryKey: ['match-rankings'] })
     },
   })
 }

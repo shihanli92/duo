@@ -4,6 +4,7 @@ export type Couple = Database['public']['Tables']['couples']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Name = Database['public']['Tables']['names']['Row']
 export type Vote = Database['public']['Tables']['votes']['Row']
+export type MatchRanking = Database['public']['Tables']['match_rankings']['Row']
 
 export type Gender = 'girl' | 'boy' | 'unisex'
 export type Accent = 'a' | 'b'

@@ -11,8 +11,9 @@ import {
 } from '../lib/queries'
 import TabBar from '../components/TabBar'
 
-function LastNameForm({ coupleId, initialValue }: { coupleId: string; initialValue: string }) {
-  const [lastName, setLastName] = useState(initialValue)
+function NameForm({ coupleId, initialLastName, initialMiddleName }: { coupleId: string; initialLastName: string; initialMiddleName: string }) {
+  const [middleName, setMiddleName] = useState(initialMiddleName)
+  const [lastName, setLastName] = useState(initialLastName)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const updateCouple = useUpdateCouple()
@@ -21,7 +22,7 @@ function LastNameForm({ coupleId, initialValue }: { coupleId: string; initialVal
     e.preventDefault()
     setError(null)
     try {
-      await updateCouple.mutateAsync({ coupleId, lastName: lastName.trim() })
+      await updateCouple.mutateAsync({ coupleId, middleName: middleName.trim(), lastName: lastName.trim() })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
     } catch (err) {
@@ -31,22 +32,32 @@ function LastNameForm({ coupleId, initialValue }: { coupleId: string; initialVal
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-pass/10 pt-2 mt-2">
+      <form onSubmit={handleSubmit} className="space-y-2 border-t border-pass/10 pt-2 mt-2">
         <input
           type="text"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          placeholder="Last name (shown on cards)"
-          aria-label="Last name"
-          className="flex-1 rounded-xl border border-pass/30 px-4 py-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+          value={middleName}
+          onChange={(e) => setMiddleName(e.target.value)}
+          placeholder="Middle name (optional)"
+          aria-label="Middle name"
+          className="w-full rounded-xl border border-pass/30 px-4 py-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
         />
-        <button
-          type="submit"
-          disabled={updateCouple.isPending}
-          className="rounded-lg bg-match px-4 py-2 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match focus-visible:ring-offset-2 disabled:opacity-50"
-        >
-          {success ? 'Saved!' : 'Save'}
-        </button>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Last name (shown on cards)"
+            aria-label="Last name"
+            className="flex-1 rounded-xl border border-pass/30 px-4 py-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+          />
+          <button
+            type="submit"
+            disabled={updateCouple.isPending}
+            className="rounded-lg bg-match px-4 py-2 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match focus-visible:ring-offset-2 disabled:opacity-50"
+          >
+            {success ? 'Saved!' : 'Save'}
+          </button>
+        </div>
       </form>
       {error && <p className="text-xs text-accent-b mt-1">{error}</p>}
     </>
@@ -217,7 +228,7 @@ export default function Settings() {
               {!partner && (
                 <p className="text-sm text-pass">Waiting for partner to join...</p>
               )}
-              <LastNameForm coupleId={couple.id} initialValue={couple.last_name} />
+              <NameForm coupleId={couple.id} initialLastName={couple.last_name} initialMiddleName={couple.middle_name} />
             </div>
           )}
         </section>
