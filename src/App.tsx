@@ -15,7 +15,7 @@ const Settings = lazy(() => import('./routes/Settings'))
 function Loading() {
   return (
     <div className="flex min-h-svh items-center justify-center">
-      <p className="text-pass">Loading...</p>
+      <p className="text-ink/50">Loading...</p>
     </div>
   )
 }

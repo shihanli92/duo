@@ -7,16 +7,19 @@ export type Database = {
         Row: {
           id: string
           invite_code: string
+          last_name: string
           created_at: string
         }
         Insert: {
           id?: string
           invite_code?: string
+          last_name?: string
           created_at?: string
         }
         Update: {
           id?: string
           invite_code?: string
+          last_name?: string
           created_at?: string
         }
         Relationships: []

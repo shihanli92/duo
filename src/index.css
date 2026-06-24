@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import './theme.css';
 
 @theme {
   --color-paper: #faf6f0;
@@ -24,6 +23,27 @@ body {
 
 #root {
   min-height: 100svh;
+}
+
+/* Match overlay animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideRight {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 0.5; }
+}
+
+@keyframes slideLeft {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 0.5; }
 }
 
 /* Respect reduced motion preference */

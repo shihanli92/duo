@@ -7,12 +7,13 @@ const EXIT_DISTANCE = 500
 
 interface SwipeDeckProps {
   names: Name[]
+  lastName?: string
   onVote: (name: Name, value: 'like' | 'pass') => void
   onUndo?: () => void
   canUndo?: boolean
 }
 
-export default function SwipeDeck({ names, onVote, onUndo, canUndo }: SwipeDeckProps) {
+export default function SwipeDeck({ names, lastName, onVote, onUndo, canUndo }: SwipeDeckProps) {
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [exiting, setExiting] = useState<'left' | 'right' | null>(null)
@@ -103,11 +104,11 @@ export default function SwipeDeck({ names, onVote, onUndo, canUndo }: SwipeDeckP
   return (
     <div className="relative flex h-full flex-col items-center">
       {/* Card stack */}
-      <div className="relative h-80 w-full max-w-xs sm:h-96">
+      <div className="relative h-80 w-full max-w-xs sm:h-96 md:h-[28rem] md:max-w-md lg:h-[32rem] lg:max-w-lg">
         {/* Next card peek */}
         {nextName && !exiting && (
           <div className="absolute inset-0 scale-95 opacity-60">
-            <NameCard name={nextName} />
+            <NameCard name={nextName} lastName={lastName} />
           </div>
         )}
 
@@ -138,7 +139,7 @@ export default function SwipeDeck({ names, onVote, onUndo, canUndo }: SwipeDeckP
             </div>
           )}
 
-          <NameCard name={currentName} />
+          <NameCard name={currentName} lastName={lastName} />
         </div>
       </div>
 

@@ -10,9 +10,9 @@ export default function VennHeader({ matchCount }: VennHeaderProps) {
     >
       <svg width="160" height="100" viewBox="0 0 160 100" aria-hidden="true">
         {/* Partner A circle (periwinkle) */}
-        <circle cx="60" cy="50" r="38" fill="var(--color-accent-a)" opacity="0.35" />
+        <circle cx="60" cy="50" r="38" fill="var(--color-accent-a)" opacity="0.5" />
         {/* Partner B circle (rose) */}
-        <circle cx="100" cy="50" r="38" fill="var(--color-accent-b)" opacity="0.35" />
+        <circle cx="100" cy="50" r="38" fill="var(--color-accent-b)" opacity="0.5" />
         {/* Match count in the overlap */}
         <text
           x="80"

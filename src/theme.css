@@ -1,11 +1,1 @@
-:root {
-  --color-paper: #faf6f0;
-  --color-ink: #2c2833;
-  --color-a: #6e80d8;
-  --color-b: #e07a93;
-  --color-match: #9a6fc0;
-  --color-pass: #9a95a3;
-
-  --font-display: 'Fraunces', serif;
-  --font-body: 'Hanken Grotesk', sans-serif;
-}
+/* Design tokens are defined in index.css under @theme. This file is kept empty. */

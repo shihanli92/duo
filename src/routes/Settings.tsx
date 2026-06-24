@@ -6,9 +6,52 @@ import {
   useCouple,
   usePartnerProfile,
   useUpdateProfile,
+  useUpdateCouple,
   useResetVotes,
 } from '../lib/queries'
 import TabBar from '../components/TabBar'
+
+function LastNameForm({ coupleId, initialValue }: { coupleId: string; initialValue: string }) {
+  const [lastName, setLastName] = useState(initialValue)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const updateCouple = useUpdateCouple()
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    try {
+      await updateCouple.mutateAsync({ coupleId, lastName: lastName.trim() })
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update')
+    }
+  }
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-pass/10 pt-2 mt-2">
+        <input
+          type="text"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Last name (shown on cards)"
+          aria-label="Last name"
+          className="flex-1 rounded-xl border border-pass/30 px-4 py-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+        />
+        <button
+          type="submit"
+          disabled={updateCouple.isPending}
+          className="rounded-lg bg-match px-4 py-2 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match focus-visible:ring-offset-2 disabled:opacity-50"
+        >
+          {success ? 'Saved!' : 'Save'}
+        </button>
+      </form>
+      {error && <p className="text-xs text-accent-b mt-1">{error}</p>}
+    </>
+  )
+}
 
 export default function Settings() {
   const { user, signOut } = useAuth()
@@ -106,7 +149,7 @@ export default function Settings() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               aria-label="Display name"
-              className="flex-1 rounded-lg border border-pass/30 px-3 py-2 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+              className="flex-1 rounded-xl border border-pass/30 px-4 py-3 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
             />
             <button
               type="submit"
@@ -174,6 +217,7 @@ export default function Settings() {
               {!partner && (
                 <p className="text-sm text-pass">Waiting for partner to join...</p>
               )}
+              <LastNameForm coupleId={couple.id} initialValue={couple.last_name} />
             </div>
           )}
         </section>

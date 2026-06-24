@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   useAuth,
   useProfile,
+  useCouple,
   useMatches,
   usePartnerProgress,
 } from '../lib/queries'
@@ -16,6 +17,7 @@ export default function Matches() {
   const { user } = useAuth()
   const { data: profile } = useProfile(user)
   const coupleId = profile?.couple_id
+  const { data: couple } = useCouple(coupleId)
   const { data: matches = [], isLoading: matchesLoading } = useMatches(coupleId)
   const { data: progress } = usePartnerProgress(coupleId)
   const qc = useQueryClient()
@@ -76,10 +78,10 @@ export default function Matches() {
 
       {matchesLoading ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-pass">Loading matches...</p>
+          <p className="text-ink/50">Loading matches...</p>
         </div>
       ) : (
-        <MatchList matches={matches} />
+        <MatchList matches={matches} lastName={couple?.last_name} />
       )}
 
       <TabBar />

@@ -2,6 +2,7 @@ import type { Match } from '../types'
 
 interface MatchListProps {
   matches: Match[]
+  lastName?: string
 }
 
 const genderColors: Record<string, string> = {
@@ -10,7 +11,13 @@ const genderColors: Record<string, string> = {
   unisex: 'bg-match/15 text-match',
 }
 
-export default function MatchList({ matches }: MatchListProps) {
+function formatInitials(firstName: string, lastName: string): string {
+  const fi = firstName.charAt(0).toUpperCase()
+  const li = lastName.charAt(0).toUpperCase()
+  return `${fi}.${li}.`
+}
+
+export default function MatchList({ matches, lastName }: MatchListProps) {
   if (matches.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -30,7 +37,15 @@ export default function MatchList({ matches }: MatchListProps) {
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
           <div className="flex-1">
-            <p className="font-display text-lg font-semibold text-ink">{match.value}</p>
+            <p className="font-display text-lg font-semibold text-ink">
+              {match.value}
+              {lastName && <span className="text-base font-medium text-pass/50"> {lastName}</span>}
+            </p>
+            {lastName && (
+              <p className="text-xs tracking-wide text-pass/50">
+                {formatInitials(match.value, lastName)}
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${genderColors[match.gender] ?? 'bg-pass/15 text-pass'}`}

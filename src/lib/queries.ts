@@ -167,6 +167,26 @@ export function useCouple(coupleId: string | null | undefined) {
   })
 }
 
+export function useUpdateCouple() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: { coupleId: string; lastName: string }) => {
+      const { data: couple, error } = await supabase
+        .from('couples')
+        .update({ last_name: data.lastName })
+        .eq('id', data.coupleId)
+        .select()
+        .single()
+      if (error) throw error
+      return couple
+    },
+    onSuccess: (couple) => {
+      qc.setQueryData(['couple', couple.id], couple)
+    },
+  })
+}
+
 export function useCreateCouple() {
   return useMutation({
     mutationFn: async () => {
@@ -225,8 +245,6 @@ export function useUnvotedNames(coupleId: string | null | undefined, gender?: Ge
         nameQuery = nameQuery.eq('gender', gender)
       }
 
-      nameQuery = nameQuery.order('value')
-
       const { data: names, error: nameError } = await nameQuery
       if (nameError) throw nameError
 
@@ -237,7 +255,14 @@ export function useUnvotedNames(coupleId: string | null | undefined, gender?: Ge
       if (voteError) throw voteError
 
       const votedNameIds = new Set(myVotes?.map((v) => v.name_id))
-      return (names ?? []).filter((n) => !votedNameIds.has(n.id))
+      const unvoted = (names ?? []).filter((n) => !votedNameIds.has(n.id))
+
+      // Fisher-Yates shuffle
+      for (let i = unvoted.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[unvoted[i], unvoted[j]] = [unvoted[j]!, unvoted[i]!]
+      }
+      return unvoted
     },
     enabled: !!coupleId,
   })
