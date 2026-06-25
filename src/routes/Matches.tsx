@@ -68,7 +68,7 @@ export default function Matches() {
   const coupleId = profile?.couple_id
   const { data: couple } = useCouple(coupleId)
   const { data: matches = [], isLoading: matchesLoading } = useMatches(coupleId)
-  const { data: myLikes = [] } = useMyLikes(coupleId)
+  const { data: myLikes = [] } = useMyLikes(coupleId, user?.id)
   const { data: progress } = usePartnerProgress(coupleId)
   const [pane, setPane] = useState<'mutual' | 'likes'>('mutual')
   const qc = useQueryClient()

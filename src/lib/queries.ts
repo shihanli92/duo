@@ -256,6 +256,7 @@ export function useUnvotedNames(coupleId: string | null | undefined, gender?: Ge
       const { data: myVotes, error: voteError } = await supabase
         .from('votes')
         .select('name_id')
+        .eq('couple_id', coupleId!)
       if (voteError) throw voteError
 
       const votedNameIds = new Set(myVotes?.map((v) => v.name_id))
@@ -312,7 +313,7 @@ export function useAddName() {
 // My Likes (names I voted "like" on — privacy safe, own votes only)
 // ============================================================
 
-export function useMyLikes(coupleId: string | null | undefined) {
+export function useMyLikes(coupleId: string | null | undefined, userId: string | undefined) {
   return useQuery({
     queryKey: ['my-likes', coupleId],
     queryFn: async () => {
@@ -320,6 +321,7 @@ export function useMyLikes(coupleId: string | null | undefined) {
         .from('votes')
         .select('name_id, names!inner(id, value, gender, origin, meaning)')
         .eq('couple_id', coupleId!)
+        .eq('user_id', userId!)
         .eq('value', 'like')
       if (error) throw error
       return (data ?? []).map((row) => {
@@ -333,7 +335,7 @@ export function useMyLikes(coupleId: string | null | undefined) {
         return { id: n.id, value: n.value, gender: n.gender, origin: n.origin, meaning: n.meaning }
       }) as Match[]
     },
-    enabled: !!coupleId,
+    enabled: !!coupleId && !!userId,
   })
 }
 

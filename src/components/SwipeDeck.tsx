@@ -48,13 +48,10 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
     [names],
   )
 
-  // Clamp index if deck shrinks (e.g. after a vote removes a name)
-  const clampedIndex = Math.min(deckIndex, Math.max(stableNames.length - 1, 0))
-  if (clampedIndex !== deckIndex) {
-    setDeckIndex(clampedIndex)
-  }
+  // Derived clamped index — no setState, no race conditions
+  const effectiveIndex = Math.min(deckIndex, Math.max(stableNames.length - 1, 0))
 
-  const baseName = stableNames[clampedIndex]
+  const baseName = stableNames[effectiveIndex]
   const currentName = replacedName ?? baseName
   // Always compute variants from the original base name, not the replacement
   const variants = baseName ? getVariants(baseName.value) : []
@@ -69,18 +66,16 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
       // the name from the array) doesn't cause the next card to briefly
       // inherit the exit animation.
       const nameToVote = currentName
-      const deckLen = stableNames.length
       setTimeout(() => {
         setExiting(null)
         setDragX(0)
         setShowVariants(false)
         setReplacedName(null)
-        setDeckIndex((i) => Math.min(i, Math.max(deckLen - 2, 0)))
         onVote(nameToVote, direction === 'right' ? 'like' : 'pass')
         swipingRef.current = false
       }, 250)
     },
-    [currentName, exiting, onVote, stableNames.length, disabled],
+    [currentName, exiting, onVote, disabled],
   )
 
   const onPointerDown = useCallback(
@@ -146,18 +141,18 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   }, [localMiddleName, middleName, onMiddleNameChange])
 
   const goBack = useCallback(() => {
-    if (clampedIndex <= 0) return
-    setDeckIndex(clampedIndex - 1)
+    if (effectiveIndex <= 0) return
+    setDeckIndex(effectiveIndex - 1)
     setShowVariants(false)
     setReplacedName(null)
-  }, [clampedIndex])
+  }, [effectiveIndex])
 
   const goForward = useCallback(() => {
-    if (clampedIndex >= stableNames.length - 1) return
-    setDeckIndex(clampedIndex + 1)
+    if (effectiveIndex >= stableNames.length - 1) return
+    setDeckIndex(effectiveIndex + 1)
     setShowVariants(false)
     setReplacedName(null)
-  }, [clampedIndex, stableNames.length])
+  }, [effectiveIndex, stableNames.length])
 
   // Keyboard support
   useEffect(() => {
@@ -292,7 +287,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
         <div className="mt-3 flex items-center justify-center gap-4">
           <button
             onClick={goBack}
-            disabled={clampedIndex <= 0}
+            disabled={effectiveIndex <= 0}
             aria-label="Previous name"
             className="rounded-full p-1.5 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
           >
@@ -301,11 +296,11 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
             </svg>
           </button>
           <span className="min-w-[4rem] text-center text-xs tabular-nums text-pass">
-            {clampedIndex + 1} / {stableNames.length}
+            {effectiveIndex + 1} / {stableNames.length}
           </span>
           <button
             onClick={goForward}
-            disabled={clampedIndex >= stableNames.length - 1}
+            disabled={effectiveIndex >= stableNames.length - 1}
             aria-label="Next name"
             className="rounded-full p-1.5 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
           >
