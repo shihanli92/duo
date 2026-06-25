@@ -64,6 +64,9 @@ export default function NameCard({ name, lastName, middleName, onTapName, style,
           <span className="text-sm text-pass md:text-base">{name.origin}</span>
         )}
       </div>
+      {name.meaning && (
+        <p className="mt-1 text-xs italic text-pass/70">{name.meaning}</p>
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ export default function AddNames() {
   const [name, setName] = useState('')
   const [gender, setGender] = useState<Gender>('unisex')
   const [origin, setOrigin] = useState('')
+  const [meaning, setMeaning] = useState('')
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,10 +29,12 @@ export default function AddNames() {
         value: name.trim(),
         gender,
         origin: origin.trim(),
+        meaning: meaning.trim() || undefined,
       })
       setSuccess(`"${name.trim()}" added!`)
       setName('')
       setOrigin('')
+      setMeaning('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add name')
     }
@@ -98,6 +101,20 @@ export default function AddNames() {
             value={origin}
             onChange={(e) => setOrigin(e.target.value)}
             placeholder="e.g. Greek, Hebrew, Modern English"
+            className="w-full rounded-xl border border-pass/30 bg-white px-4 py-3 text-ink placeholder:text-pass/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="meaning-input" className="mb-1 block text-sm font-medium text-ink">
+            Meaning <span className="text-pass">(optional)</span>
+          </label>
+          <input
+            id="meaning-input"
+            type="text"
+            value={meaning}
+            onChange={(e) => setMeaning(e.target.value)}
+            placeholder="e.g. noble, light-bearer"
             className="w-full rounded-xl border border-pass/30 bg-white px-4 py-3 text-ink placeholder:text-pass/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
           />
         </div>

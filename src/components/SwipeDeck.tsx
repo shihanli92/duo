@@ -24,7 +24,7 @@ interface SwipeDeckProps {
   onUndo?: () => void
   canUndo?: boolean
   onMiddleNameChange?: (value: string) => void
-  onSelectVariant?: (original: Name, variantValue: string) => Promise<Name>
+  onSelectVariant?: (original: Name, variantValue: string, variantLang?: string) => Promise<Name>
   disabled?: boolean
 }
 
@@ -125,14 +125,14 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   }, [variants.length])
 
   const handleVariantSelect = useCallback(
-    async (variantValue: string) => {
+    async (variantValue: string, variantLang?: string) => {
       if (!baseName || !onSelectVariant) return
       // Selecting the original name again clears the replacement
       if (variantValue === baseName.value) {
         setReplacedName(null)
         return
       }
-      const newName = await onSelectVariant(baseName, variantValue)
+      const newName = await onSelectVariant(baseName, variantValue, variantLang)
       setReplacedName(newName)
     },
     [baseName, onSelectVariant],
@@ -240,7 +240,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
       {/* Variant pills */}
       {showVariants && variants.length > 0 && baseName && (
         <div className="mt-2 flex flex-wrap justify-center gap-2 px-4">
-          <span className="w-full text-center text-xs text-pass">Spelling variants:</span>
+          <span className="w-full text-center text-xs text-pass">Variants:</span>
           {/* Original name pill */}
           <button
             onClick={() => handleVariantSelect(baseName.value)}
@@ -253,18 +253,18 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
             {baseName.value}
           </button>
           {variants.map((v) => {
-            const isActive = replacedName?.value === v
+            const isActive = replacedName?.value === v.name
             return (
               <button
-                key={v}
-                onClick={() => handleVariantSelect(v)}
+                key={v.name}
+                onClick={() => handleVariantSelect(v.name, v.lang)}
                 className={`rounded-full border px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match ${
                   isActive
                     ? 'border-match bg-match text-white'
                     : 'border-match/30 bg-white text-match hover:bg-match/10'
                 }`}
               >
-                {v}
+                {v.name}{v.lang && <span className="ml-1 text-xs opacity-60">{v.lang}</span>}
               </button>
             )
           })}

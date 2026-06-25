@@ -95,7 +95,7 @@ export default function Swipe() {
   )
 
   const handleSelectVariant = useCallback(
-    async (original: Name, variantValue: string) => {
+    async (original: Name, variantValue: string, variantLang?: string) => {
       if (!coupleId) throw new Error('No couple')
       // Check if this variant already exists to avoid duplicates
       const existing = await findNameByValue(coupleId, variantValue)
@@ -104,7 +104,7 @@ export default function Swipe() {
         coupleId,
         value: variantValue,
         gender: original.gender as 'girl' | 'boy' | 'unisex',
-        origin: original.origin ?? '',
+        origin: variantLang || original.origin || '',
       })
       return newName as Name
     },

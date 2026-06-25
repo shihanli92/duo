@@ -62,6 +62,9 @@ export default function MatchList({ matches, lastName, middleName }: MatchListPr
                 <span className="text-xs text-pass">{match.origin}</span>
               )}
             </div>
+            {match.meaning && (
+              <p className="mt-0.5 text-xs italic text-pass/60">{match.meaning}</p>
+            )}
           </div>
         </li>
       ))}

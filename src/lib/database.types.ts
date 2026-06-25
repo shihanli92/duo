@@ -58,6 +58,7 @@ export type Database = {
           value: string
           gender: string
           origin: string
+          meaning: string
           created_by: string | null
           created_at: string
         }
@@ -67,6 +68,7 @@ export type Database = {
           value: string
           gender: string
           origin?: string
+          meaning?: string
           created_by?: string | null
           created_at?: string
         }
@@ -76,6 +78,7 @@ export type Database = {
           value?: string
           gender?: string
           origin?: string
+          meaning?: string
           created_by?: string | null
           created_at?: string
         }
@@ -148,6 +151,7 @@ export type Database = {
           value: string
           gender: string
           origin: string
+          meaning: string
         }[]
       }
       partner_progress: {

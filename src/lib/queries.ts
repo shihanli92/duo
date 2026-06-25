@@ -286,6 +286,7 @@ export function useAddName() {
       value: string
       gender: Gender
       origin: string
+      meaning?: string
     }) => {
       const { data: name, error } = await supabase
         .from('names')
@@ -294,6 +295,7 @@ export function useAddName() {
           value: data.value,
           gender: data.gender,
           origin: data.origin,
+          ...(data.meaning && { meaning: data.meaning }),
         })
         .select()
         .single()
@@ -316,13 +318,19 @@ export function useMyLikes(coupleId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('votes')
-        .select('name_id, names!inner(id, value, gender, origin)')
+        .select('name_id, names!inner(id, value, gender, origin, meaning)')
         .eq('couple_id', coupleId!)
         .eq('value', 'like')
       if (error) throw error
       return (data ?? []).map((row) => {
-        const n = row.names as unknown as { id: string; value: string; gender: string; origin: string }
-        return { id: n.id, value: n.value, gender: n.gender, origin: n.origin }
+        const n = row.names as unknown as {
+          id: string
+          value: string
+          gender: string
+          origin: string
+          meaning: string
+        }
+        return { id: n.id, value: n.value, gender: n.gender, origin: n.origin, meaning: n.meaning }
       }) as Match[]
     },
     enabled: !!coupleId,

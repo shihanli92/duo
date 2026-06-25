@@ -52,6 +52,9 @@ function LikesList({ likes }: { likes: Match[] }) {
                 <span className="text-xs text-pass">{like.origin}</span>
               )}
             </div>
+            {like.meaning && (
+              <p className="mt-0.5 text-xs italic text-pass/60">{like.meaning}</p>
+            )}
           </div>
         </li>
       ))}
