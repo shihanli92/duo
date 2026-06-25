@@ -259,17 +259,22 @@ export function useUnvotedNames(coupleId: string | null | undefined, gender?: Ge
       if (voteError) throw voteError
 
       const votedNameIds = new Set(myVotes?.map((v) => v.name_id))
-      const unvoted = (names ?? []).filter((n) => !votedNameIds.has(n.id))
-
-      // Fisher-Yates shuffle
-      for (let i = unvoted.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[unvoted[i], unvoted[j]] = [unvoted[j]!, unvoted[i]!]
-      }
-      return unvoted
+      return (names ?? []).filter((n) => !votedNameIds.has(n.id))
     },
     enabled: !!coupleId,
   })
+}
+
+export async function findNameByValue(coupleId: string, value: string): Promise<Name | null> {
+  const { data, error } = await supabase
+    .from('names')
+    .select('*')
+    .eq('value', value)
+    .or(`couple_id.is.null,couple_id.eq.${coupleId}`)
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
 }
 
 export function useAddName() {
@@ -302,6 +307,29 @@ export function useAddName() {
 }
 
 // ============================================================
+// My Likes (names I voted "like" on — privacy safe, own votes only)
+// ============================================================
+
+export function useMyLikes(coupleId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['my-likes', coupleId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('votes')
+        .select('name_id, names!inner(id, value, gender, origin)')
+        .eq('couple_id', coupleId!)
+        .eq('value', 'like')
+      if (error) throw error
+      return (data ?? []).map((row) => {
+        const n = row.names as unknown as { id: string; value: string; gender: string; origin: string }
+        return { id: n.id, value: n.value, gender: n.gender, origin: n.origin }
+      }) as Match[]
+    },
+    enabled: !!coupleId,
+  })
+}
+
+// ============================================================
 // Votes
 // ============================================================
 
@@ -329,28 +357,21 @@ export function useCastVote() {
       return vote
     },
     onMutate: async (newVote) => {
-      await qc.cancelQueries({ queryKey: ['unvoted-names'] })
-      const previous = qc.getQueryData<Name[]>(['unvoted-names', newVote.coupleId])
-      // Optimistically remove the voted name from the list
-      qc.setQueryData<Name[]>(
-        ['unvoted-names', newVote.coupleId],
-        (old) => old?.filter((n) => n.id !== newVote.nameId),
-      )
-      // Also remove from filtered views
+      await qc.cancelQueries({ queryKey: ['unvoted-names', newVote.coupleId] })
+      // Optimistically remove the voted name from all filtered views
       qc.setQueriesData<Name[]>(
         { queryKey: ['unvoted-names', newVote.coupleId] },
         (old) => old?.filter((n) => n.id !== newVote.nameId),
       )
-      return { previous }
     },
-    onError: (_err, vars, context) => {
-      if (context?.previous) {
-        qc.setQueryData(['unvoted-names', vars.coupleId], context.previous)
-      }
+    onError: (_err, vars) => {
+      // Refetch to restore correct state
+      qc.invalidateQueries({ queryKey: ['unvoted-names', vars.coupleId] })
     },
     onSettled: (_data, _err, vars) => {
       qc.invalidateQueries({ queryKey: ['unvoted-names'] })
       qc.invalidateQueries({ queryKey: ['matches', vars.coupleId] })
+      qc.invalidateQueries({ queryKey: ['my-likes', vars.coupleId] })
       qc.invalidateQueries({ queryKey: ['partner-progress', vars.coupleId] })
     },
   })
@@ -367,6 +388,7 @@ export function useDeleteVote() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unvoted-names'] })
       qc.invalidateQueries({ queryKey: ['matches'] })
+      qc.invalidateQueries({ queryKey: ['my-likes'] })
       qc.invalidateQueries({ queryKey: ['partner-progress'] })
     },
   })

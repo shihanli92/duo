@@ -10,6 +10,7 @@ import {
   usePartnerProgress,
   useUpdateCouple,
   useAddName,
+  findNameByValue,
 } from '../lib/queries'
 import SwipeDeck from '../components/SwipeDeck'
 import GenderFilter from '../components/GenderFilter'
@@ -83,6 +84,8 @@ export default function Swipe() {
     })
   }, [lastVote, deleteVote])
 
+  const dismissMatch = useCallback(() => setMatchedName(null), [])
+
   const handleMiddleNameChange = useCallback(
     (value: string) => {
       if (!coupleId) return
@@ -94,6 +97,9 @@ export default function Swipe() {
   const handleSelectVariant = useCallback(
     async (original: Name, variantValue: string) => {
       if (!coupleId) throw new Error('No couple')
+      // Check if this variant already exists to avoid duplicates
+      const existing = await findNameByValue(coupleId, variantValue)
+      if (existing) return existing as Name
       const newName = await addName.mutateAsync({
         coupleId,
         value: variantValue,
@@ -135,7 +141,7 @@ export default function Swipe() {
       </div>
 
       {matchedName && (
-        <MatchOverlay name={matchedName} onDismiss={() => setMatchedName(null)} />
+        <MatchOverlay name={matchedName} onDismiss={dismissMatch} />
       )}
 
       <TabBar />

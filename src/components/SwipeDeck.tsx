@@ -1,10 +1,20 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import NameCard from './NameCard'
 import { getVariants } from '../lib/nameVariants'
 import type { Name } from '../types'
 
 const SWIPE_THRESHOLD = 100
 const EXIT_DISTANCE = 500
+
+// Deterministic hash for stable deck ordering (pure — no Math.random)
+function stableHash(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return hash
+}
 
 interface SwipeDeckProps {
   names: Name[]
@@ -28,36 +38,48 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   const dragging = useRef(false)
   const startX = useRef(0)
   const didDrag = useRef(false)
+  const swipingRef = useRef(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
+  // Stable ordering: hash-based sort so deck order is consistent across refetches
+  const stableNames = useMemo(
+    () => [...names].sort((a, b) => stableHash(a.id) - stableHash(b.id)),
+    [names],
+  )
+
   // Clamp index if deck shrinks (e.g. after a vote removes a name)
-  const clampedIndex = Math.min(deckIndex, Math.max(names.length - 1, 0))
+  const clampedIndex = Math.min(deckIndex, Math.max(stableNames.length - 1, 0))
   if (clampedIndex !== deckIndex) {
     setDeckIndex(clampedIndex)
   }
 
-  const baseName = names[clampedIndex]
+  const baseName = stableNames[clampedIndex]
   const currentName = replacedName ?? baseName
   // Always compute variants from the original base name, not the replacement
   const variants = baseName ? getVariants(baseName.value) : []
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
-      if (!currentName || exiting) return
+      if (!currentName || exiting || swipingRef.current) return
+      swipingRef.current = true
       setExiting(direction)
-      // Wait for exit animation, then trigger vote
+      // Wait for exit animation, then reset state and trigger vote.
+      // Reset state BEFORE onVote so the optimistic update (which removes
+      // the name from the array) doesn't cause the next card to briefly
+      // inherit the exit animation.
+      const nameToVote = currentName
+      const deckLen = stableNames.length
       setTimeout(() => {
-        onVote(currentName, direction === 'right' ? 'like' : 'pass')
         setExiting(null)
         setDragX(0)
         setShowVariants(false)
         setReplacedName(null)
-        // After vote, the voted name is removed from the array.
-        // If we were at the end, step back so we don't overshoot.
-        setDeckIndex((i) => Math.min(i, Math.max(names.length - 2, 0)))
+        setDeckIndex((i) => Math.min(i, Math.max(deckLen - 2, 0)))
+        onVote(nameToVote, direction === 'right' ? 'like' : 'pass')
+        swipingRef.current = false
       }, 250)
     },
-    [currentName, exiting, onVote, names.length],
+    [currentName, exiting, onVote, stableNames.length],
   )
 
   const onPointerDown = useCallback(
@@ -130,11 +152,11 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   }, [clampedIndex])
 
   const goForward = useCallback(() => {
-    if (clampedIndex >= names.length - 1) return
+    if (clampedIndex >= stableNames.length - 1) return
     setDeckIndex(clampedIndex + 1)
     setShowVariants(false)
     setReplacedName(null)
-  }, [clampedIndex, names.length])
+  }, [clampedIndex, stableNames.length])
 
   // Keyboard support
   useEffect(() => {
@@ -265,7 +287,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
       )}
 
       {/* Deck navigation */}
-      {names.length > 1 && (
+      {stableNames.length > 1 && (
         <div className="mt-3 flex items-center justify-center gap-4">
           <button
             onClick={goBack}
@@ -278,11 +300,11 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
             </svg>
           </button>
           <span className="min-w-[4rem] text-center text-xs tabular-nums text-pass">
-            {clampedIndex + 1} / {names.length}
+            {clampedIndex + 1} / {stableNames.length}
           </span>
           <button
             onClick={goForward}
-            disabled={clampedIndex >= names.length - 1}
+            disabled={clampedIndex >= stableNames.length - 1}
             aria-label="Next name"
             className="rounded-full p-1.5 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
           >

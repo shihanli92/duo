@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useAuth,
   useProfile,
   useCouple,
   useMatches,
+  useMyLikes,
   usePartnerProgress,
 } from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -12,6 +13,51 @@ import VennHeader from '../components/VennHeader'
 import MatchList from '../components/MatchList'
 import ProgressBar from '../components/ProgressBar'
 import TabBar from '../components/TabBar'
+import type { Match } from '../types'
+
+const genderColors: Record<string, string> = {
+  girl: 'bg-accent-b/15 text-accent-b',
+  boy: 'bg-accent-a/15 text-accent-a',
+  unisex: 'bg-match/15 text-match',
+}
+
+function LikesList({ likes }: { likes: Match[] }) {
+  if (likes.length === 0) {
+    return (
+      <div className="px-4 py-8 text-center">
+        <p className="text-pass">Names you like will appear here.</p>
+      </div>
+    )
+  }
+
+  return (
+    <ul className="space-y-2 px-4">
+      {likes.map((like) => (
+        <li
+          key={like.id}
+          className="flex items-center gap-3 rounded-xl bg-white/60 px-4 py-2.5 shadow-sm"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-pass)" className="shrink-0" aria-hidden="true">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          <div className="flex-1">
+            <p className="font-display text-base font-medium text-ink/70">{like.value}</p>
+            <div className="flex items-center gap-2">
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${genderColors[like.gender] ?? 'bg-pass/15 text-pass'}`}
+              >
+                {like.gender}
+              </span>
+              {like.origin && (
+                <span className="text-xs text-pass">{like.origin}</span>
+              )}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 export default function Matches() {
   const { user } = useAuth()
@@ -19,8 +65,14 @@ export default function Matches() {
   const coupleId = profile?.couple_id
   const { data: couple } = useCouple(coupleId)
   const { data: matches = [], isLoading: matchesLoading } = useMatches(coupleId)
+  const { data: myLikes = [] } = useMyLikes(coupleId)
   const { data: progress } = usePartnerProgress(coupleId)
+  const [pane, setPane] = useState<'mutual' | 'likes'>('mutual')
   const qc = useQueryClient()
+
+  // Likes that aren't already matches
+  const matchIds = new Set(matches.map((m) => m.id))
+  const likesOnly = myLikes.filter((l) => !matchIds.has(l.id))
 
   // Realtime: re-fetch matches when any vote is inserted for this couple
   useEffect(() => {
@@ -38,6 +90,7 @@ export default function Matches() {
         },
         () => {
           qc.invalidateQueries({ queryKey: ['matches', coupleId] })
+          qc.invalidateQueries({ queryKey: ['my-likes', coupleId] })
           qc.invalidateQueries({ queryKey: ['partner-progress', coupleId] })
         },
       )
@@ -50,12 +103,10 @@ export default function Matches() {
 
   return (
     <div className="flex min-h-svh flex-col pb-20">
-      <div className="px-4 pt-6 pb-4">
-        <h1 className="text-center font-display text-2xl font-semibold text-ink">Matches</h1>
-      </div>
-
-      <div className="flex justify-center py-4">
-        <VennHeader matchCount={matches.length} />
+      <div className="px-4 pt-6 pb-2">
+        <div className="flex justify-center py-4">
+          <VennHeader matchCount={matches.length} />
+        </div>
       </div>
 
       {/* Progress bars */}
@@ -76,13 +127,42 @@ export default function Matches() {
         </div>
       )}
 
-      {matchesLoading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-ink/50">Loading matches...</p>
-        </div>
-      ) : (
-        <MatchList matches={matches} lastName={couple?.last_name} middleName={couple?.middle_name} />
-      )}
+      {/* Pane switcher */}
+      <div className="mx-4 mt-2 flex rounded-xl bg-white/60 p-1 shadow-sm">
+        <button
+          onClick={() => setPane('mutual')}
+          className={`flex-1 rounded-lg py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match ${
+            pane === 'mutual'
+              ? 'bg-match text-white shadow-sm'
+              : 'text-pass hover:text-ink'
+          }`}
+        >
+          Mutual{matches.length > 0 ? ` (${matches.length})` : ''}
+        </button>
+        <button
+          onClick={() => setPane('likes')}
+          className={`flex-1 rounded-lg py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match ${
+            pane === 'likes'
+              ? 'bg-match text-white shadow-sm'
+              : 'text-pass hover:text-ink'
+          }`}
+        >
+          My Likes{likesOnly.length > 0 ? ` (${likesOnly.length})` : ''}
+        </button>
+      </div>
+
+      {/* Pane content */}
+      <div className="mt-4">
+        {matchesLoading ? (
+          <div className="flex flex-1 items-center justify-center py-12">
+            <p className="text-ink/50">Loading...</p>
+          </div>
+        ) : pane === 'mutual' ? (
+          <MatchList matches={matches} lastName={couple?.last_name} middleName={couple?.middle_name} />
+        ) : (
+          <LikesList likes={likesOnly} />
+        )}
+      </div>
 
       <TabBar />
     </div>

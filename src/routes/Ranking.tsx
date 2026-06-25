@@ -27,29 +27,38 @@ export default function Ranking() {
   const qc = useQueryClient()
 
   const [localOrder, setLocalOrder] = useState<string[]>([])
-  const [initialized, setInitialized] = useState(false)
 
-  // Build the ranked list from matches + rankings
   const myRankings = allRankings.filter((r) => r.user_id === user?.id)
   const partnerRankings = allRankings.filter((r) => r.user_id !== user?.id)
 
-  // Initialize local order from rankings or match order
-  if (matches.length > 0 && !initialized) {
-    if (myRankings.length > 0) {
-      // Use saved ranking order, append any unranked matches
-      const rankedIds = myRankings
-        .sort((a, b) => a.rank - b.rank)
-        .map((r) => r.name_id)
-      const matchIds = new Set(matches.map((m) => m.id))
-      const validRankedIds = rankedIds.filter((id) => matchIds.has(id))
-      const unrankedIds = matches
-        .filter((m) => !validRankedIds.includes(m.id))
-        .map((m) => m.id)
-      setLocalOrder([...validRankedIds, ...unrankedIds])
-    } else {
-      setLocalOrder(matches.map((m) => m.id))
+  // Adjust local order during render (React's recommended derived-state pattern).
+  // Handles both initial load and subsequent match additions/removals.
+  if (matches.length > 0) {
+    const matchIds = new Set(matches.map((m) => m.id))
+    const hasNewMatches = matches.some((m) => !localOrder.includes(m.id))
+    const hasStaleIds = localOrder.some((id) => !matchIds.has(id))
+
+    if (localOrder.length === 0) {
+      // First initialization: use saved ranking order if available
+      if (myRankings.length > 0) {
+        const rankedIds = [...myRankings]
+          .sort((a, b) => a.rank - b.rank)
+          .map((r) => r.name_id)
+        const validRankedIds = rankedIds.filter((id) => matchIds.has(id))
+        const unrankedIds = matches
+          .filter((m) => !validRankedIds.includes(m.id))
+          .map((m) => m.id)
+        setLocalOrder([...validRankedIds, ...unrankedIds])
+      } else {
+        setLocalOrder(matches.map((m) => m.id))
+      }
+    } else if (hasNewMatches || hasStaleIds) {
+      // Keep existing order, remove stale, append new
+      const kept = localOrder.filter((id) => matchIds.has(id))
+      const keptSet = new Set(kept)
+      const newIds = matches.filter((m) => !keptSet.has(m.id)).map((m) => m.id)
+      setLocalOrder([...kept, ...newIds])
     }
-    setInitialized(true)
   }
 
   // Build display list
