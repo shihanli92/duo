@@ -1,7 +1,8 @@
+-- enable pgcrypto for gen_random_bytes (invite codes)
 -- couples
 create table public.couples (
   id uuid primary key default gen_random_uuid(),
-  invite_code text unique not null default encode(gen_random_bytes(4), 'hex'),
+  invite_code text unique not null default encode(extensions.gen_random_bytes(4), 'hex'),
   created_at timestamptz not null default now()
 );
 
