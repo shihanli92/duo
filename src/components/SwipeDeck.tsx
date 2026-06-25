@@ -25,9 +25,10 @@ interface SwipeDeckProps {
   canUndo?: boolean
   onMiddleNameChange?: (value: string) => void
   onSelectVariant?: (original: Name, variantValue: string) => Promise<Name>
+  disabled?: boolean
 }
 
-export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo, canUndo, onMiddleNameChange, onSelectVariant }: SwipeDeckProps) {
+export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo, canUndo, onMiddleNameChange, onSelectVariant, disabled }: SwipeDeckProps) {
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [exiting, setExiting] = useState<'left' | 'right' | null>(null)
@@ -60,7 +61,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
-      if (!currentName || exiting || swipingRef.current) return
+      if (!currentName || exiting || swipingRef.current || disabled) return
       swipingRef.current = true
       setExiting(direction)
       // Wait for exit animation, then reset state and trigger vote.
@@ -79,19 +80,19 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
         swipingRef.current = false
       }, 250)
     },
-    [currentName, exiting, onVote, stableNames.length],
+    [currentName, exiting, onVote, stableNames.length, disabled],
   )
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (exiting) return
+      if (exiting || disabled) return
       dragging.current = true
       didDrag.current = false
       startX.current = e.clientX
       setIsDragging(true)
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     },
-    [exiting],
+    [exiting, disabled],
   )
 
   const onPointerMove = useCallback(

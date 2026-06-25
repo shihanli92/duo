@@ -137,6 +137,7 @@ export default function Swipe() {
           canUndo={!!lastVote}
           onMiddleNameChange={handleMiddleNameChange}
           onSelectVariant={handleSelectVariant}
+          disabled={!!matchedName}
         />
       </div>
 

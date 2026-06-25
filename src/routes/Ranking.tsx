@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   useAuth,
   useProfile,
+  usePartnerProfile,
   useMatches,
   useMatchRankings,
   useUpdateRankings,
@@ -21,6 +22,7 @@ export default function Ranking() {
   const { user } = useAuth()
   const { data: profile } = useProfile(user)
   const coupleId = profile?.couple_id
+  const { data: partner } = usePartnerProfile(coupleId, user?.id)
   const { data: matches = [], isLoading: matchesLoading } = useMatches(coupleId)
   const { data: allRankings = [], isLoading: rankingsLoading } = useMatchRankings(coupleId)
   const updateRankings = useUpdateRankings()
@@ -61,7 +63,7 @@ export default function Ranking() {
     }
   }
 
-  // Build display list
+  // Build display lists
   const matchMap = new Map(matches.map((m) => [m.id, m]))
   const partnerRankMap = new Map(partnerRankings.map((r) => [r.name_id, r.rank]))
 
@@ -76,6 +78,19 @@ export default function Ranking() {
       }
     })
     .filter((m): m is RankedMatch => m !== null)
+
+  // Partner's list sorted by their ranking
+  const partnerOrdered = [...partnerRankings]
+    .sort((a, b) => a.rank - b.rank)
+    .map((r) => matchMap.get(r.name_id))
+    .filter((m): m is Match => m !== null)
+
+  // Set of name IDs where both partners gave the same rank
+  const agreedIds = new Set(
+    rankedMatches
+      .filter((m) => m.partnerRank !== null && m.partnerRank === m.myRank)
+      .map((m) => m.id),
+  )
 
   // Persist rankings
   const saveRankings = useCallback(
@@ -112,6 +127,55 @@ export default function Ranking() {
     [localOrder, saveRankings],
   )
 
+  // Drag-to-reorder
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOffsetY, setDragOffsetY] = useState(0)
+  const dragStartY = useRef(0)
+  const dragCurrentIndex = useRef(0)
+  const itemHeight = useRef(0)
+  const orderRef = useRef(localOrder)
+  useEffect(() => { orderRef.current = localOrder }, [localOrder])
+
+  const onDragStart = useCallback((index: number, e: React.PointerEvent) => {
+    e.preventDefault()
+    const li = (e.target as HTMLElement).closest('li')
+    if (!li) return
+    itemHeight.current = li.getBoundingClientRect().height + 8 // 8px = space-y-2 gap
+    dragStartY.current = e.clientY
+    dragCurrentIndex.current = index
+    setDragIndex(index)
+    setDragOffsetY(0)
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [])
+
+  const onDragMove = useCallback((e: React.PointerEvent) => {
+    if (dragIndex === null) return
+    const dy = e.clientY - dragStartY.current
+    setDragOffsetY(dy)
+
+    const shift = Math.round(dy / itemHeight.current)
+    const target = Math.max(0, Math.min(orderRef.current.length - 1, dragCurrentIndex.current + shift))
+
+    if (target !== dragCurrentIndex.current) {
+      const newOrder = [...orderRef.current]
+      const [removed] = newOrder.splice(dragCurrentIndex.current, 1)
+      newOrder.splice(target, 0, removed!)
+      setLocalOrder(newOrder)
+      // Reset baseline so the item tracks smoothly from its new position
+      dragStartY.current += (target - dragCurrentIndex.current) * itemHeight.current
+      dragCurrentIndex.current = target
+      setDragIndex(target)
+      setDragOffsetY(e.clientY - dragStartY.current)
+    }
+  }, [dragIndex])
+
+  const onDragEnd = useCallback(() => {
+    if (dragIndex === null) return
+    saveRankings(orderRef.current)
+    setDragIndex(null)
+    setDragOffsetY(0)
+  }, [dragIndex, saveRankings])
+
   // Realtime: update when partner changes their rankings
   useEffect(() => {
     if (!coupleId) return
@@ -145,12 +209,15 @@ export default function Ranking() {
     )
   }
 
+  const myLabel = profile?.display_name || 'You'
+  const partnerLabel = partner?.display_name || 'Partner'
+
   return (
     <div className="flex min-h-svh flex-col pb-20">
       <div className="px-4 pt-6 pb-2">
         <h1 className="text-center font-display text-2xl font-semibold text-ink">Ranking</h1>
         <p className="mt-1 text-center text-sm text-pass">
-          Move your favorites to the top
+          Drag to reorder your favorites
         </p>
       </div>
 
@@ -168,68 +235,109 @@ export default function Ranking() {
           </Link>
         </div>
       ) : (
-        <ul className="space-y-2 px-4 py-4">
-          {rankedMatches.map((match, index) => {
-            const agreed = match.partnerRank !== null && match.partnerRank === match.myRank
-            return (
-              <li
-                key={match.id}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 shadow-sm ${
-                  agreed
-                    ? 'border border-match/30 bg-match/10'
-                    : 'bg-white'
-                }`}
-              >
-                {/* My rank */}
-                <span className="w-8 text-center font-display text-lg font-semibold text-match">
-                  {match.myRank}
-                </span>
-
-                {/* Name */}
-                <div className="flex-1">
-                  <p className="font-display text-lg font-semibold text-ink">
-                    {match.value}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-pass capitalize">{match.gender}</span>
-                    {match.origin && (
-                      <span className="text-xs text-pass">{match.origin}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Partner rank */}
-                <span className="w-8 text-center text-sm text-pass">
-                  {match.partnerRank !== null ? `#${match.partnerRank}` : '\u2014'}
-                </span>
-
-                {/* Reorder buttons */}
-                <div className="flex flex-col gap-0.5">
-                  <button
-                    onClick={() => moveUp(index)}
-                    disabled={index === 0}
-                    aria-label={`Move ${match.value} up`}
-                    className="rounded p-1 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
+        <div className="grid grid-cols-2 gap-3 px-4 py-4">
+          {/* My ranking column */}
+          <div>
+            <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-accent-a">
+              {myLabel}
+            </h2>
+            <ul className="space-y-1.5">
+              {rankedMatches.map((match, index) => {
+                const isDragging = dragIndex === index
+                return (
+                  <li
+                    key={match.id}
+                    className={`flex items-center gap-1.5 rounded-lg px-2 py-2 shadow-sm transition-shadow ${
+                      agreedIds.has(match.id)
+                        ? 'border border-match/30 bg-match/10'
+                        : 'bg-white'
+                    } ${isDragging ? 'relative z-10 shadow-lg ring-2 ring-match/30' : ''}`}
+                    style={isDragging ? { transform: `translateY(${dragOffsetY}px)` } : undefined}
+                    onPointerMove={onDragMove}
+                    onPointerUp={onDragEnd}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="18 15 12 9 6 15" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => moveDown(index)}
-                    disabled={index === rankedMatches.length - 1}
-                    aria-label={`Move ${match.value} down`}
-                    className="rounded p-1 text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-30"
+                    {/* Drag handle */}
+                    <button
+                      className="touch-none cursor-grab p-0.5 text-pass/30 hover:text-pass active:cursor-grabbing"
+                      onPointerDown={(e) => onDragStart(index, e)}
+                      aria-label={`Drag to reorder ${match.value}`}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="9" cy="5" r="1.5" />
+                        <circle cx="15" cy="5" r="1.5" />
+                        <circle cx="9" cy="12" r="1.5" />
+                        <circle cx="15" cy="12" r="1.5" />
+                        <circle cx="9" cy="19" r="1.5" />
+                        <circle cx="15" cy="19" r="1.5" />
+                      </svg>
+                    </button>
+
+                    <span className="w-5 text-center font-display text-sm font-semibold text-match">
+                      {match.myRank}
+                    </span>
+                    <span className="flex-1 truncate font-display text-sm font-semibold text-ink">
+                      {match.value}
+                    </span>
+
+                    {/* Compact reorder buttons */}
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => moveUp(index)}
+                        disabled={index === 0}
+                        aria-label={`Move ${match.value} up`}
+                        className="p-0.5 text-pass hover:text-ink disabled:opacity-20"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="18 15 12 9 6 15" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => moveDown(index)}
+                        disabled={index === rankedMatches.length - 1}
+                        aria-label={`Move ${match.value} down`}
+                        className="p-0.5 text-pass hover:text-ink disabled:opacity-20"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          {/* Partner ranking column */}
+          <div>
+            <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-accent-b">
+              {partnerLabel}
+            </h2>
+            {partnerOrdered.length === 0 ? (
+              <p className="py-4 text-center text-xs text-pass">Not ranked yet</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {partnerOrdered.map((match, index) => (
+                  <li
+                    key={match.id}
+                    className={`flex items-center gap-1.5 rounded-lg px-2 py-2 shadow-sm ${
+                      agreedIds.has(match.id)
+                        ? 'border border-match/30 bg-match/10'
+                        : 'bg-white/60'
+                    }`}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                    <span className="w-5 text-center font-display text-sm font-semibold text-accent-b">
+                      {index + 1}
+                    </span>
+                    <span className="flex-1 truncate font-display text-sm font-medium text-ink/70">
+                      {match.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
 
       <TabBar />
