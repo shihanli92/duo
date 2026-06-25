@@ -16,6 +16,7 @@ export interface Match {
   gender: string
   origin: string
   meaning?: string
+  voteId?: string
 }
 
 export interface PartnerProgress {

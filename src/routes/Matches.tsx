@@ -6,6 +6,7 @@ import {
   useCouple,
   useMatches,
   useMyLikes,
+  useDeleteVote,
   usePartnerProgress,
 } from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -21,7 +22,7 @@ const genderColors: Record<string, string> = {
   unisex: 'bg-match/15 text-match',
 }
 
-function LikesList({ likes }: { likes: Match[] }) {
+function LikesList({ likes, onRemove }: { likes: Match[]; onRemove: (voteId: string) => void }) {
   if (likes.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -56,6 +57,18 @@ function LikesList({ likes }: { likes: Match[] }) {
               <p className="mt-0.5 text-xs italic text-pass/60">{like.meaning}</p>
             )}
           </div>
+          {like.voteId && (
+            <button
+              onClick={() => onRemove(like.voteId!)}
+              aria-label={`Remove ${like.value} from likes`}
+              className="shrink-0 rounded-full p-1.5 text-pass/40 transition-colors hover:bg-pass/10 hover:text-pass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
         </li>
       ))}
     </ul>
@@ -70,6 +83,7 @@ export default function Matches() {
   const { data: matches = [], isLoading: matchesLoading } = useMatches(coupleId)
   const { data: myLikes = [] } = useMyLikes(coupleId, user?.id)
   const { data: progress } = usePartnerProgress(coupleId)
+  const deleteVote = useDeleteVote()
   const [pane, setPane] = useState<'mutual' | 'likes'>('mutual')
   const qc = useQueryClient()
 
@@ -163,7 +177,7 @@ export default function Matches() {
         ) : pane === 'mutual' ? (
           <MatchList matches={matches} lastName={couple?.last_name} middleName={couple?.middle_name} />
         ) : (
-          <LikesList likes={likesOnly} />
+          <LikesList likes={likesOnly} onRemove={(voteId) => deleteVote.mutate(voteId)} />
         )}
       </div>
 

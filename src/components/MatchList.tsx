@@ -15,7 +15,10 @@ const genderColors: Record<string, string> = {
 function formatInitials(firstName: string, middleName: string, lastName: string): string {
   const fi = firstName.charAt(0).toUpperCase()
   const mi = middleName ? middleName.charAt(0).toUpperCase() : ''
-  const li = lastName.charAt(0).toUpperCase()
+  const li = lastName
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('.-')
   return mi ? `${fi}.${mi}.${li}.` : `${fi}.${li}.`
 }
 

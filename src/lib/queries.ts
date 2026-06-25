@@ -319,7 +319,7 @@ export function useMyLikes(coupleId: string | null | undefined, userId: string |
     queryFn: async () => {
       const { data, error } = await supabase
         .from('votes')
-        .select('name_id, names!inner(id, value, gender, origin, meaning)')
+        .select('id, name_id, names!inner(id, value, gender, origin, meaning)')
         .eq('couple_id', coupleId!)
         .eq('user_id', userId!)
         .eq('value', 'like')
@@ -332,7 +332,7 @@ export function useMyLikes(coupleId: string | null | undefined, userId: string |
           origin: string
           meaning: string
         }
-        return { id: n.id, value: n.value, gender: n.gender, origin: n.origin, meaning: n.meaning }
+        return { id: n.id, value: n.value, gender: n.gender, origin: n.origin, meaning: n.meaning, voteId: row.id }
       }) as Match[]
     },
     enabled: !!coupleId && !!userId,
