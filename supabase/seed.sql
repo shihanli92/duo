@@ -155,7 +155,7 @@ insert into public.names (value, gender, origin, meaning) values
   ('Zaina', 'girl', 'Arabic', 'beautiful, radiant'),
   ('Zara', 'girl', 'Arabic', 'blooming, radiant'),
   ('Zelda', 'girl', 'Germanic', 'blessed, happy'),
-  ('Zoe', 'girl', 'Greek', 'life')
+  ('Zoe', 'girl', 'Greek', 'life'),
   -- Boys (134)
   ('Aarav', 'boy', 'Sanskrit', 'noble one'),
   ('Adam', 'boy', 'Hebrew', 'man, earth'),
@@ -290,7 +290,7 @@ insert into public.names (value, gender, origin, meaning) values
   ('William', 'boy', 'Germanic', 'resolute protector'),
   ('Wolfe', 'boy', 'English', 'wolf'),
   ('Youssef', 'boy', 'Arabic', 'God increases'),
-  ('Zayn', 'boy', 'Arabic', 'beauty, grace')
+  ('Zayn', 'boy', 'Arabic', 'beauty, grace'),
   -- Unisex (68)
   ('Addison', 'unisex', 'English', 'son of Adam'),
   ('Ainsley', 'unisex', 'English', 'one''s own meadow'),

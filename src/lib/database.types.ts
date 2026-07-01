@@ -114,6 +114,36 @@ export type Database = {
         }
         Relationships: []
       }
+      match_notes: {
+        Row: {
+          id: string
+          couple_id: string
+          name_id: string
+          author_id: string
+          body: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          couple_id: string
+          name_id: string
+          author_id: string
+          body: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          couple_id?: string
+          name_id?: string
+          author_id?: string
+          body?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       votes: {
         Row: {
           id: string
@@ -161,6 +191,17 @@ export type Database = {
           my_voted: number
           total_names: number
           match_count: number
+          my_likes: number
+          partner_likes: number
+        }[]
+      }
+      get_match_notes: {
+        Args: { p_couple_id: string }
+        Returns: {
+          name_id: string
+          author_id: string
+          body: string
+          updated_at: string
         }[]
       }
     }

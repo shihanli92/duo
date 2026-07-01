@@ -7,6 +7,7 @@ import type {
   Couple,
   Name,
   Match,
+  MatchNote,
   MatchRanking,
   PartnerProgress,
   Gender,
@@ -468,10 +469,77 @@ export function usePartnerProgress(coupleId: string | null | undefined) {
             my_voted: Number(row.my_voted),
             total_names: Number(row.total_names),
             match_count: Number(row.match_count),
+            my_likes: Number(row.my_likes),
+            partner_likes: Number(row.partner_likes),
           } as PartnerProgress)
         : null
     },
     enabled: !!coupleId,
+  })
+}
+
+// ============================================================
+// Match notes (private-to-the-couple, only on matched names)
+// ============================================================
+
+// Both partners' notes, but only for names that are a mutual match.
+export function useMatchNotes(coupleId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['match-notes', coupleId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_match_notes', {
+        p_couple_id: coupleId!,
+      })
+      if (error) throw error
+      return (data ?? []) as MatchNote[]
+    },
+    enabled: !!coupleId,
+  })
+}
+
+// Create or replace the caller's own note on a name (one note per name+author).
+export function useUpsertNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      coupleId: string
+      nameId: string
+      userId: string
+      body: string
+    }) => {
+      const { error } = await supabase.from('match_notes').upsert(
+        {
+          couple_id: input.coupleId,
+          name_id: input.nameId,
+          author_id: input.userId,
+          body: input.body,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'name_id,author_id' },
+      )
+      if (error) throw error
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['match-notes', vars.coupleId] })
+    },
+  })
+}
+
+// Delete the caller's own note on a name.
+export function useDeleteNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { coupleId: string; nameId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('match_notes')
+        .delete()
+        .eq('name_id', input.nameId)
+        .eq('author_id', input.userId)
+      if (error) throw error
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['match-notes', vars.coupleId] })
+    },
   })
 }
 

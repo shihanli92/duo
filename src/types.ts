@@ -24,4 +24,15 @@ export interface PartnerProgress {
   my_voted: number
   total_names: number
   match_count: number
+  my_likes: number
+  partner_likes: number
+}
+
+// A note left on a matched name. Surfaced (for both partners) only via
+// get_match_notes(), which gates on mutual-match status.
+export interface MatchNote {
+  name_id: string
+  author_id: string
+  body: string
+  updated_at: string
 }
