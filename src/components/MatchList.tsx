@@ -1,9 +1,13 @@
-import type { Match } from '../types'
+import MatchNotes from './MatchNotes'
+import type { Match, MatchNote } from '../types'
 
 interface MatchListProps {
   matches: Match[]
   lastName?: string
   middleName?: string
+  coupleId?: string
+  userId?: string
+  notes?: MatchNote[]
 }
 
 const genderColors: Record<string, string> = {
@@ -22,7 +26,7 @@ function formatInitials(firstName: string, middleName: string, lastName: string)
   return mi ? `${fi}.${mi}.${li}.` : `${fi}.${li}.`
 }
 
-export default function MatchList({ matches, lastName, middleName }: MatchListProps) {
+export default function MatchList({ matches, lastName, middleName, coupleId, userId, notes = [] }: MatchListProps) {
   if (matches.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -36,8 +40,9 @@ export default function MatchList({ matches, lastName, middleName }: MatchListPr
       {matches.map((match) => (
         <li
           key={match.id}
-          className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm"
+          className="rounded-xl bg-white px-4 py-3 shadow-sm"
         >
+          <div className="flex items-center gap-3">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--color-match)" className="shrink-0">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
@@ -69,6 +74,16 @@ export default function MatchList({ matches, lastName, middleName }: MatchListPr
               <p className="mt-0.5 text-xs italic text-pass/60">{match.meaning}</p>
             )}
           </div>
+          </div>
+
+          {coupleId && userId && (
+            <MatchNotes
+              coupleId={coupleId}
+              userId={userId}
+              nameId={match.id}
+              notes={notes.filter((n) => n.name_id === match.id)}
+            />
+          )}
         </li>
       ))}
     </ul>

@@ -8,13 +8,14 @@ import {
   useMyLikes,
   useDeleteVote,
   usePartnerProgress,
+  useMatchNotes,
 } from '../lib/queries'
 import { supabase } from '../lib/supabase'
-import VennHeader from '../components/VennHeader'
+import LivingVenn from '../components/LivingVenn'
 import MatchList from '../components/MatchList'
 import ProgressBar from '../components/ProgressBar'
 import TabBar from '../components/TabBar'
-import type { Match } from '../types'
+import type { Accent, Match } from '../types'
 
 const genderColors: Record<string, string> = {
   girl: 'bg-accent-b/15 text-accent-b',
@@ -83,6 +84,7 @@ export default function Matches() {
   const { data: matches = [], isLoading: matchesLoading } = useMatches(coupleId)
   const { data: myLikes = [] } = useMyLikes(coupleId, user?.id)
   const { data: progress } = usePartnerProgress(coupleId)
+  const { data: notes = [] } = useMatchNotes(coupleId)
   const deleteVote = useDeleteVote()
   const [pane, setPane] = useState<'mutual' | 'likes'>('mutual')
   const qc = useQueryClient()
@@ -109,6 +111,7 @@ export default function Matches() {
           qc.invalidateQueries({ queryKey: ['matches', coupleId] })
           qc.invalidateQueries({ queryKey: ['my-likes', coupleId] })
           qc.invalidateQueries({ queryKey: ['partner-progress', coupleId] })
+          qc.invalidateQueries({ queryKey: ['match-notes', coupleId] })
         },
       )
       .subscribe()
@@ -122,7 +125,12 @@ export default function Matches() {
     <div className="flex min-h-svh flex-col pb-20">
       <div className="px-4 pt-6 pb-2">
         <div className="flex justify-center py-4">
-          <VennHeader matchCount={matches.length} />
+          <LivingVenn
+            myLikes={progress?.my_likes ?? 0}
+            partnerLikes={progress?.partner_likes ?? 0}
+            matchCount={matches.length}
+            myAccent={(profile?.accent as Accent) ?? 'a'}
+          />
         </div>
       </div>
 
@@ -175,7 +183,14 @@ export default function Matches() {
             <p className="text-ink/50">Loading...</p>
           </div>
         ) : pane === 'mutual' ? (
-          <MatchList matches={matches} lastName={couple?.last_name} middleName={couple?.middle_name} />
+          <MatchList
+            matches={matches}
+            lastName={couple?.last_name}
+            middleName={couple?.middle_name}
+            coupleId={coupleId ?? undefined}
+            userId={user?.id}
+            notes={notes}
+          />
         ) : (
           <LikesList likes={likesOnly} onRemove={(voteId) => deleteVote.mutate(voteId)} />
         )}

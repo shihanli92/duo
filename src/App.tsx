@@ -13,6 +13,7 @@ const AddNames = lazy(() => import('./routes/AddNames'))
 const Ranking = lazy(() => import('./routes/Ranking'))
 const Settings = lazy(() => import('./routes/Settings'))
 const DeckPreview = lazy(() => import('./routes/DeckPreview'))
+const VennPreview = lazy(() => import('./routes/VennPreview'))
 
 function Loading() {
   return (
@@ -30,7 +31,10 @@ export default function App() {
           <Suspense fallback={<Loading />}>
             <Routes>
               {import.meta.env.DEV && (
-                <Route path="/preview" element={<DeckPreview />} />
+                <>
+                  <Route path="/preview" element={<DeckPreview />} />
+                  <Route path="/preview-venn" element={<VennPreview />} />
+                </>
               )}
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
