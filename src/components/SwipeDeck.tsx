@@ -36,6 +36,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   const [replacedName, setReplacedName] = useState<Name | null>(null)
   const [localMiddleName, setLocalMiddleName] = useState(middleName ?? '')
   const [deckIndex, setDeckIndex] = useState(0)
+  const [inlineName, setInlineName] = useState(false)
   const dragging = useRef(false)
   const startX = useRef(0)
   const didDrag = useRef(false)
@@ -193,9 +194,9 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   const exitX = exiting === 'right' ? EXIT_DISTANCE : exiting === 'left' ? -EXIT_DISTANCE : 0
 
   return (
-    <div className="relative flex h-full flex-col items-center">
+    <div className="relative flex h-full w-full flex-col items-center">
       {/* Card stack */}
-      <div className="relative h-80 w-full max-w-xs sm:h-96 md:h-[28rem] md:max-w-md lg:h-[32rem] lg:max-w-lg">
+      <div className="relative h-80 w-full max-w-sm sm:h-96 sm:max-w-lg md:h-[28rem] md:max-w-2xl lg:h-[32rem] lg:max-w-3xl">
         {/* Current card */}
         <div
           ref={cardRef}
@@ -213,13 +214,13 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
         >
           {/* Swipe indicators */}
           {dragX > 30 && (
-            <div className="absolute left-4 top-4 z-20 rounded-lg bg-match/90 px-3 py-1 font-semibold text-white">
-              LIKE
+            <div className="absolute left-5 top-5 z-20 rounded-full bg-match/90 px-4 py-1 text-sm font-medium uppercase tracking-[0.14em] text-white shadow-sm">
+              Like
             </div>
           )}
           {dragX < -30 && (
-            <div className="absolute right-4 top-4 z-20 rounded-lg bg-pass/90 px-3 py-1 font-semibold text-white">
-              PASS
+            <div className="absolute right-5 top-5 z-20 rounded-full bg-pass/90 px-4 py-1 text-sm font-medium uppercase tracking-[0.14em] text-white shadow-sm">
+              Pass
             </div>
           )}
 
@@ -228,6 +229,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
             lastName={lastName}
             middleName={middleName}
             onTapName={variants.length > 0 ? handleNameTap : undefined}
+            inlineName={inlineName}
           />
         </div>
       </div>
@@ -311,13 +313,29 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
         </div>
       )}
 
+      {/* Full-name toggle — only when there's a middle/last name to fold in */}
+      {(lastName || middleName) && (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={inlineName}
+          onClick={() => setInlineName((v) => !v)}
+          className="mt-4 flex items-center gap-2 rounded-full px-2 py-1 text-xs text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
+        >
+          <span className={`relative h-4 w-7 rounded-full transition-colors ${inlineName ? 'bg-match' : 'bg-pass/30'}`}>
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${inlineName ? 'left-[0.875rem]' : 'left-0.5'}`} />
+          </span>
+          Full name on one line
+        </button>
+      )}
+
       {/* Action buttons */}
       <div className="mt-4 flex items-center gap-8">
         <button
           onClick={() => handleSwipe('left')}
           disabled={!!exiting}
           aria-label="Pass on this name"
-          className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-pass/30 bg-white text-pass shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pass disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-full border border-pass/25 bg-[#FFFCF8] text-pass shadow-[0_4px_14px_rgba(154,149,163,0.18)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pass disabled:opacity-50"
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -329,7 +347,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
           <button
             onClick={onUndo}
             aria-label="Undo last vote"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-pass/20 bg-white text-pass transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pass"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-pass/20 bg-[#FFFCF8] text-pass shadow-[0_2px_8px_rgba(154,149,163,0.15)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pass"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="1 4 1 10 7 10" />
@@ -342,7 +360,7 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
           onClick={() => handleSwipe('right')}
           disabled={!!exiting}
           aria-label="Like this name"
-          className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-match/30 bg-white text-match shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-full border border-match/40 bg-[#FFFCF8] text-match shadow-[0_4px_16px_rgba(154,111,192,0.22)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match disabled:opacity-50"
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
