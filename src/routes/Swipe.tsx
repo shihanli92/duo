@@ -29,7 +29,7 @@ export default function Swipe() {
 
   const coupleId = profile?.couple_id
   const { data: couple } = useCouple(coupleId)
-  const { data: names = [], isLoading } = useUnvotedNames(coupleId, gender, origin)
+  const { data: names = [], isLoading } = useUnvotedNames(coupleId, gender, origin, couple?.include_extended)
   const { data: origins = [] } = useOrigins(coupleId)
   const { data: progress } = usePartnerProgress(coupleId)
   const castVote = useCastVote()
@@ -109,6 +109,8 @@ export default function Swipe() {
         value: variantValue,
         gender: original.gender as 'girl' | 'boy' | 'unisex',
         origin: variantLang || original.origin || '',
+        // A variant shares its root's meaning, so carry it over
+        meaning: original.meaning || undefined,
       })
       return newName as Name
     },

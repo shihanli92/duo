@@ -173,12 +173,18 @@ export function useUpdateCouple() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: { coupleId: string; lastName?: string; middleName?: string }) => {
+    mutationFn: async (data: {
+      coupleId: string
+      lastName?: string
+      middleName?: string
+      includeExtended?: boolean
+    }) => {
       const { data: couple, error } = await supabase
         .from('couples')
         .update({
           ...(data.lastName !== undefined && { last_name: data.lastName }),
           ...(data.middleName !== undefined && { middle_name: data.middleName }),
+          ...(data.includeExtended !== undefined && { include_extended: data.includeExtended }),
         })
         .eq('id', data.coupleId)
         .select()
@@ -236,59 +242,68 @@ export function useJoinCouple() {
 // Names
 // ============================================================
 
+const PAGE_SIZE = 1000 // PostgREST caps rows per request; page past it
+
 export function useUnvotedNames(
   coupleId: string | null | undefined,
   gender?: Gender,
   origin?: string,
+  includeExtended?: boolean,
 ) {
   return useQuery({
-    queryKey: ['unvoted-names', coupleId, gender, origin],
+    queryKey: ['unvoted-names', coupleId, gender, origin, includeExtended],
     queryFn: async () => {
-      // Get names visible to this couple
-      let nameQuery = supabase
-        .from('names')
-        .select('*')
-        .or(`couple_id.is.null,couple_id.eq.${coupleId}`)
-
-      if (gender) {
-        nameQuery = nameQuery.eq('gender', gender)
+      // Page through all names visible to this couple (there can be thousands)
+      const names: Name[] = []
+      for (let from = 0; ; from += PAGE_SIZE) {
+        let q = supabase
+          .from('names')
+          .select('*')
+          .or(`couple_id.is.null,couple_id.eq.${coupleId}`)
+        if (gender) q = q.eq('gender', gender)
+        if (origin) q = q.eq('origin', origin)
+        // Core is English-mainstream, so an explicit origin pick should surface the
+        // WHOLE library for that origin — only restrict to core when browsing broadly.
+        if (!includeExtended && !origin) q = q.eq('pack', 'core')
+        q = q.order('id').range(from, from + PAGE_SIZE - 1)
+        const { data, error } = await q
+        if (error) throw error
+        names.push(...((data ?? []) as Name[]))
+        if (!data || data.length < PAGE_SIZE) break
       }
-      if (origin) {
-        nameQuery = nameQuery.eq('origin', origin)
+
+      // Page through my votes to filter out already-voted names
+      const votedNameIds = new Set<string>()
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from('votes')
+          .select('name_id')
+          .eq('couple_id', coupleId!)
+          .order('id')
+          .range(from, from + PAGE_SIZE - 1)
+        if (error) throw error
+        for (const v of data ?? []) votedNameIds.add(v.name_id)
+        if (!data || data.length < PAGE_SIZE) break
       }
 
-      const { data: names, error: nameError } = await nameQuery
-      if (nameError) throw nameError
-
-      // Get my votes to filter out already-voted names
-      const { data: myVotes, error: voteError } = await supabase
-        .from('votes')
-        .select('name_id')
-        .eq('couple_id', coupleId!)
-      if (voteError) throw voteError
-
-      const votedNameIds = new Set(myVotes?.map((v) => v.name_id))
-      return (names ?? []).filter((n) => !votedNameIds.has(n.id))
+      return names.filter((n) => !votedNameIds.has(n.id))
     },
     enabled: !!coupleId,
   })
 }
 
-// Distinct origins across the names visible to this couple — powers the origin filter.
+// Every origin in the visible library (via RPC) — powers the origin filter.
+// Shows all origins so any country can be picked, even those with no core names.
 export function useOrigins(coupleId: string | null | undefined) {
   return useQuery({
     queryKey: ['origins', coupleId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('names')
-        .select('origin')
-        .or(`couple_id.is.null,couple_id.eq.${coupleId}`)
+      const { data, error } = await supabase.rpc('distinct_origins')
       if (error) throw error
-      const seen = new Set<string>()
-      for (const row of data ?? []) {
-        if (row.origin) seen.add(row.origin)
-      }
-      return Array.from(seen).sort((a, b) => a.localeCompare(b))
+      return (data ?? [])
+        .map((r) => r.origin)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
     },
     enabled: !!coupleId,
   })

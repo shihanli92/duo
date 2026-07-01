@@ -9,6 +9,7 @@ export type Database = {
           invite_code: string
           last_name: string
           middle_name: string
+          include_extended: boolean
           created_at: string
         }
         Insert: {
@@ -16,6 +17,7 @@ export type Database = {
           invite_code?: string
           last_name?: string
           middle_name?: string
+          include_extended?: boolean
           created_at?: string
         }
         Update: {
@@ -23,6 +25,7 @@ export type Database = {
           invite_code?: string
           last_name?: string
           middle_name?: string
+          include_extended?: boolean
           created_at?: string
         }
         Relationships: []
@@ -59,6 +62,7 @@ export type Database = {
           gender: string
           origin: string
           meaning: string
+          pack: string
           created_by: string | null
           created_at: string
         }
@@ -69,6 +73,7 @@ export type Database = {
           gender: string
           origin?: string
           meaning?: string
+          pack?: string
           created_by?: string | null
           created_at?: string
         }
@@ -79,6 +84,7 @@ export type Database = {
           gender?: string
           origin?: string
           meaning?: string
+          pack?: string
           created_by?: string | null
           created_at?: string
         }
@@ -202,6 +208,12 @@ export type Database = {
           author_id: string
           body: string
           updated_at: string
+        }[]
+      }
+      distinct_origins: {
+        Args: Record<string, never>
+        Returns: {
+          origin: string
         }[]
       }
     }

@@ -71,6 +71,7 @@ export default function Settings() {
   const { data: couple } = useCouple(coupleId)
   const { data: partner } = usePartnerProfile(coupleId, user?.id)
   const updateProfile = useUpdateProfile()
+  const updateCouple = useUpdateCouple()
   const resetVotes = useResetVotes()
   const navigate = useNavigate()
 
@@ -127,6 +128,16 @@ export default function Settings() {
       navigate('/onboarding', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to leave')
+    }
+  }
+
+  const handleToggleExtended = async () => {
+    if (!couple) return
+    setError(null)
+    try {
+      await updateCouple.mutateAsync({ coupleId: couple.id, includeExtended: !couple.include_extended })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update')
     }
   }
 
@@ -232,6 +243,34 @@ export default function Settings() {
             </div>
           )}
         </section>
+
+        {/* Name library */}
+        {couple && (
+          <section className="rounded-2xl bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pass">Name library</h2>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm text-ink">Extended name pack</p>
+                <p className="mt-0.5 text-xs text-pass">
+                  Adds thousands of rarer and international names to your deck. Off by default.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!couple.include_extended}
+                aria-label="Extended name pack"
+                onClick={handleToggleExtended}
+                disabled={updateCouple.isPending}
+                className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match rounded-full disabled:opacity-50"
+              >
+                <span className={`relative block h-6 w-11 rounded-full transition-colors ${couple.include_extended ? 'bg-match' : 'bg-pass/30'}`}>
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${couple.include_extended ? 'left-[1.375rem]' : 'left-0.5'}`} />
+                </span>
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Danger zone */}
         <section className="rounded-2xl border border-accent-b/20 bg-white p-4 shadow-sm">
