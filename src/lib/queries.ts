@@ -571,12 +571,17 @@ export function useUpdateRankings() {
       coupleId: string
       userId: string
       rankings: { nameId: string; rank: number }[]
+      scopeNameIds?: string[]
     }) => {
-      const { error: deleteError } = await supabase
+      let deleteQuery = supabase
         .from('match_rankings')
         .delete()
         .eq('couple_id', data.coupleId)
         .eq('user_id', data.userId)
+      if (data.scopeNameIds) {
+        deleteQuery = deleteQuery.in('name_id', data.scopeNameIds)
+      }
+      const { error: deleteError } = await deleteQuery
       if (deleteError) throw deleteError
 
       if (data.rankings.length > 0) {

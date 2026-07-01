@@ -14,6 +14,7 @@ const Ranking = lazy(() => import('./routes/Ranking'))
 const Settings = lazy(() => import('./routes/Settings'))
 const DeckPreview = lazy(() => import('./routes/DeckPreview'))
 const VennPreview = lazy(() => import('./routes/VennPreview'))
+const BracketPreview = lazy(() => import('./routes/BracketPreview'))
 
 function Loading() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
                 <>
                   <Route path="/preview" element={<DeckPreview />} />
                   <Route path="/preview-venn" element={<VennPreview />} />
+                  <Route path="/preview-bracket" element={<BracketPreview />} />
                 </>
               )}
               <Route path="/login" element={<Login />} />

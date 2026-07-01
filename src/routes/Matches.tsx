@@ -14,8 +14,9 @@ import { supabase } from '../lib/supabase'
 import LivingVenn from '../components/LivingVenn'
 import MatchList from '../components/MatchList'
 import ProgressBar from '../components/ProgressBar'
+import GenderFilter from '../components/GenderFilter'
 import TabBar from '../components/TabBar'
-import type { Accent, Match } from '../types'
+import type { Accent, Gender, Match } from '../types'
 
 const genderColors: Record<string, string> = {
   girl: 'bg-accent-b/15 text-accent-b',
@@ -87,11 +88,17 @@ export default function Matches() {
   const { data: notes = [] } = useMatchNotes(coupleId)
   const deleteVote = useDeleteVote()
   const [pane, setPane] = useState<'mutual' | 'likes'>('mutual')
+  const [gender, setGender] = useState<Gender | undefined>(undefined)
   const qc = useQueryClient()
 
   // Likes that aren't already matches
   const matchIds = new Set(matches.map((m) => m.id))
   const likesOnly = myLikes.filter((l) => !matchIds.has(l.id))
+
+  // Gender filter applies to the lists only (the Venn stays a whole-deck view)
+  const byGender = (m: Match) => !gender || m.gender === gender
+  const shownMatches = matches.filter(byGender)
+  const shownLikes = likesOnly.filter(byGender)
 
   // Realtime: re-fetch matches when any vote is inserted for this couple
   useEffect(() => {
@@ -152,6 +159,11 @@ export default function Matches() {
         </div>
       )}
 
+      {/* Gender filter — girls / boys / unisex */}
+      <div className="flex justify-center px-4 pb-1">
+        <GenderFilter value={gender} onChange={setGender} />
+      </div>
+
       {/* Pane switcher */}
       <div className="mx-4 mt-2 flex rounded-xl bg-white/60 p-1 shadow-sm">
         <button
@@ -162,7 +174,7 @@ export default function Matches() {
               : 'text-pass hover:text-ink'
           }`}
         >
-          Mutual{matches.length > 0 ? ` (${matches.length})` : ''}
+          Mutual{shownMatches.length > 0 ? ` (${shownMatches.length})` : ''}
         </button>
         <button
           onClick={() => setPane('likes')}
@@ -172,7 +184,7 @@ export default function Matches() {
               : 'text-pass hover:text-ink'
           }`}
         >
-          My Likes{likesOnly.length > 0 ? ` (${likesOnly.length})` : ''}
+          My Likes{shownLikes.length > 0 ? ` (${shownLikes.length})` : ''}
         </button>
       </div>
 
@@ -184,7 +196,7 @@ export default function Matches() {
           </div>
         ) : pane === 'mutual' ? (
           <MatchList
-            matches={matches}
+            matches={shownMatches}
             lastName={couple?.last_name}
             middleName={couple?.middle_name}
             coupleId={coupleId ?? undefined}
@@ -192,7 +204,7 @@ export default function Matches() {
             notes={notes}
           />
         ) : (
-          <LikesList likes={likesOnly} onRemove={(voteId) => deleteVote.mutate(voteId)} />
+          <LikesList likes={shownLikes} onRemove={(voteId) => deleteVote.mutate(voteId)} />
         )}
       </div>
 
