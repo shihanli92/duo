@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import SwipeDeck from '../components/SwipeDeck'
-import type { Name } from '../types'
+import GenderFilter from '../components/GenderFilter'
+import OriginFilter from '../components/OriginFilter'
+import type { Gender, Name } from '../types'
 
 // Dev-only visual harness for the swipe deck. No auth, no Supabase — just
-// mock names so the card/deck design can be iterated at /preview. Gated to
-// dev builds in App.tsx, so it never ships.
+// mock names so the card/deck design and filters can be iterated at /preview.
+// Gated to dev builds in App.tsx, so it never ships.
 
 function mockName(partial: Partial<Name> & { value: string; gender: string }): Name {
   return {
@@ -26,10 +28,31 @@ const SAMPLE_NAMES: Name[] = [
   mockName({ value: 'Caspian', gender: 'boy', origin: 'Literary', meaning: 'of the Caspian Sea' }),
   mockName({ value: 'Constantine', gender: 'boy', origin: 'Latin', meaning: 'steadfast, constant' }),
   mockName({ value: 'Alexandrina', gender: 'girl', origin: 'Greek', meaning: 'defender of the people' }),
+  mockName({ value: 'Mia', gender: 'girl', origin: 'Italian', meaning: 'mine' }),
+  mockName({ value: 'Kenji', gender: 'boy', origin: 'Japanese', meaning: 'strong, wise' }),
+  mockName({ value: 'Aisha', gender: 'girl', origin: 'Arabic', meaning: 'alive, living' }),
+  mockName({ value: 'Finn', gender: 'boy', origin: 'Irish', meaning: 'fair, white' }),
+  mockName({ value: 'Sakura', gender: 'girl', origin: 'Japanese', meaning: 'cherry blossom' }),
+  mockName({ value: 'Sage', gender: 'unisex', origin: 'Latin', meaning: 'wise, healthy' }),
 ]
 
 export default function DeckPreview() {
+  const [gender, setGender] = useState<Gender | undefined>(undefined)
+  const [origin, setOrigin] = useState<string | undefined>(undefined)
   const [log, setLog] = useState<string[]>([])
+
+  const origins = useMemo(
+    () => Array.from(new Set(SAMPLE_NAMES.map((n) => n.origin).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [],
+  )
+
+  const names = useMemo(
+    () =>
+      SAMPLE_NAMES.filter(
+        (n) => (!gender || n.gender === gender) && (!origin || n.origin === origin),
+      ),
+    [gender, origin],
+  )
 
   const handleVote = (name: Name, value: 'like' | 'pass') => {
     setLog((prev) => [`${value} → ${name.value}`, ...prev].slice(0, 6))
@@ -42,9 +65,14 @@ export default function DeckPreview() {
         <p className="text-xs text-pass">dev-only · mock data · no login</p>
       </div>
 
+      <div className="flex flex-wrap items-center justify-center gap-3 px-4 pb-4">
+        <GenderFilter value={gender} onChange={setGender} />
+        <OriginFilter value={origin} origins={origins} onChange={setOrigin} />
+      </div>
+
       <div className="flex flex-1 items-center justify-center px-4">
         <SwipeDeck
-          names={SAMPLE_NAMES}
+          names={names}
           lastName="Chen"
           middleName="Rose"
           onVote={handleVote}

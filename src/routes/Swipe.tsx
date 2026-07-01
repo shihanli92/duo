@@ -10,10 +10,12 @@ import {
   usePartnerProgress,
   useUpdateCouple,
   useAddName,
+  useOrigins,
   findNameByValue,
 } from '../lib/queries'
 import SwipeDeck from '../components/SwipeDeck'
 import GenderFilter from '../components/GenderFilter'
+import OriginFilter from '../components/OriginFilter'
 import MatchOverlay from '../components/MatchOverlay'
 import TabBar from '../components/TabBar'
 import type { Gender, Name, Vote, PartnerProgress } from '../types'
@@ -22,11 +24,13 @@ export default function Swipe() {
   const { user } = useAuth()
   const { data: profile } = useProfile(user)
   const [gender, setGender] = useState<Gender | undefined>(undefined)
+  const [origin, setOrigin] = useState<string | undefined>(undefined)
   const [lastVote, setLastVote] = useState<{ vote: Vote; name: Name } | null>(null)
 
   const coupleId = profile?.couple_id
   const { data: couple } = useCouple(coupleId)
-  const { data: names = [], isLoading } = useUnvotedNames(coupleId, gender)
+  const { data: names = [], isLoading } = useUnvotedNames(coupleId, gender, origin)
+  const { data: origins = [] } = useOrigins(coupleId)
   const { data: progress } = usePartnerProgress(coupleId)
   const castVote = useCastVote()
   const deleteVote = useDeleteVote()
@@ -121,9 +125,12 @@ export default function Swipe() {
 
   return (
     <div className="flex min-h-svh flex-col pb-20">
-      {/* Header with gender filter */}
-      <div className="flex items-center justify-center px-4 pt-6 pb-4">
+      {/* Header with filters */}
+      <div className="flex flex-wrap items-center justify-center gap-3 px-4 pt-6 pb-4">
         <GenderFilter value={gender} onChange={setGender} />
+        {origins.length > 0 && (
+          <OriginFilter value={origin} origins={origins} onChange={setOrigin} />
+        )}
       </div>
 
       {/* Swipe deck */}

@@ -235,9 +235,13 @@ export function useJoinCouple() {
 // Names
 // ============================================================
 
-export function useUnvotedNames(coupleId: string | null | undefined, gender?: Gender) {
+export function useUnvotedNames(
+  coupleId: string | null | undefined,
+  gender?: Gender,
+  origin?: string,
+) {
   return useQuery({
-    queryKey: ['unvoted-names', coupleId, gender],
+    queryKey: ['unvoted-names', coupleId, gender, origin],
     queryFn: async () => {
       // Get names visible to this couple
       let nameQuery = supabase
@@ -247,6 +251,9 @@ export function useUnvotedNames(coupleId: string | null | undefined, gender?: Ge
 
       if (gender) {
         nameQuery = nameQuery.eq('gender', gender)
+      }
+      if (origin) {
+        nameQuery = nameQuery.eq('origin', origin)
       }
 
       const { data: names, error: nameError } = await nameQuery
@@ -261,6 +268,26 @@ export function useUnvotedNames(coupleId: string | null | undefined, gender?: Ge
 
       const votedNameIds = new Set(myVotes?.map((v) => v.name_id))
       return (names ?? []).filter((n) => !votedNameIds.has(n.id))
+    },
+    enabled: !!coupleId,
+  })
+}
+
+// Distinct origins across the names visible to this couple — powers the origin filter.
+export function useOrigins(coupleId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['origins', coupleId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('names')
+        .select('origin')
+        .or(`couple_id.is.null,couple_id.eq.${coupleId}`)
+      if (error) throw error
+      const seen = new Set<string>()
+      for (const row of data ?? []) {
+        if (row.origin) seen.add(row.origin)
+      }
+      return Array.from(seen).sort((a, b) => a.localeCompare(b))
     },
     enabled: !!coupleId,
   })

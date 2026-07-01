@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import NameCard from './NameCard'
+import PillSelect from './PillSelect'
 import { getVariants } from '../lib/nameVariants'
+import { FONT_ORDER, FONTS, FORMAT_ORDER, FORMAT_LABELS, type FontKey, type FormatKey } from '../lib/nameDisplay'
 import type { Name } from '../types'
 
 const SWIPE_THRESHOLD = 100
@@ -36,7 +38,8 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
   const [replacedName, setReplacedName] = useState<Name | null>(null)
   const [localMiddleName, setLocalMiddleName] = useState(middleName ?? '')
   const [deckIndex, setDeckIndex] = useState(0)
-  const [inlineName, setInlineName] = useState(false)
+  const [font, setFont] = useState<FontKey>('fraunces')
+  const [format, setFormat] = useState<FormatKey>('first')
   const dragging = useRef(false)
   const startX = useRef(0)
   const didDrag = useRef(false)
@@ -229,7 +232,8 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
             lastName={lastName}
             middleName={middleName}
             onTapName={variants.length > 0 ? handleNameTap : undefined}
-            inlineName={inlineName}
+            font={font}
+            format={format}
           />
         </div>
       </div>
@@ -313,21 +317,23 @@ export default function SwipeDeck({ names, lastName, middleName, onVote, onUndo,
         </div>
       )}
 
-      {/* Full-name toggle — only when there's a middle/last name to fold in */}
-      {(lastName || middleName) && (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={inlineName}
-          onClick={() => setInlineName((v) => !v)}
-          className="mt-4 flex items-center gap-2 rounded-full px-2 py-1 text-xs text-pass transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-match"
-        >
-          <span className={`relative h-4 w-7 rounded-full transition-colors ${inlineName ? 'bg-match' : 'bg-pass/30'}`}>
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${inlineName ? 'left-[0.875rem]' : 'left-0.5'}`} />
-          </span>
-          Full name on one line
-        </button>
-      )}
+      {/* Display options — hero font + name format */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <PillSelect
+          ariaLabel="Name font"
+          value={font}
+          onChange={(v) => setFont(v as FontKey)}
+          options={FONT_ORDER.map((k) => ({ value: k, label: FONTS[k].label }))}
+        />
+        {(lastName || middleName) && (
+          <PillSelect
+            ariaLabel="Name format"
+            value={format}
+            onChange={(v) => setFormat(v as FormatKey)}
+            options={FORMAT_ORDER.map((k) => ({ value: k, label: FORMAT_LABELS[k] }))}
+          />
+        )}
+      </div>
 
       {/* Action buttons */}
       <div className="mt-4 flex items-center gap-8">
